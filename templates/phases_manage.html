@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-container">
+
+  {% set role = session.get('user_role') %}
+
+  <div class="dashboard-welcome-banner">
+    <div>
+      <h2 class="welcome-title">Interviewfases beheren</h2>
+      <p class="welcome-subtitle">
+        Vacature: <strong>{{ job.title }}</strong> · Manager: <strong>{{ job.manager_email }}</strong>
+      </p>
+    </div>
+
+    <div>
+      <span class="status-pill status-{{ job.status }}">
+        {{ status_labels.get(job.status, job.status) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="table-container shadow">
+    <div class="section-header">
+      <h3 class="section-title">Fases</h3>
+      <p class="section-subtitle">
+        Alleen <strong>actieve</strong> fases tellen mee voor publicatiechecks.
+        Elke actieve fase moet een <strong>published</strong> template hebben met <strong>minstens 3 criteria</strong>.
+      </p>
+    </div>
+
+    <table class="candidate-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Fase</th>
+          <th>Actief</th>
+          <th>Template</th>
+          <th>Criteria</th>
+          <th>Acties</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in phases %}
+        <tr>
+          <td class="font-bold">{{ p.sequence_number }}</td>
+          <td>{{ p.phase_name }}</td>
+          <td>
+            {% if p.is_active %}
+            <span class="status-pill">Actief</span>
+            {% else %}
+            <span class="status-pill">Inactief</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if p.template_group_name %}
+            <div class="font-bold">{{ p.template_group_name }}</div>
+            <div class="status-label-small">
+              v{{ p.template_version_number }}{% if p.template_version_label %} · {{ p.template_version_label }}{% endif
+              %}
+              · {{ p.template_status }}
+            </div>
+            {% else %}
+            <span class="status-label-small">—</span>
+            {% endif %}
+          </td>
+          <td>{{ p.aspect_count }}</td>
+          <td>
+            <div class="row-actions">
+              <a href="{{ url_for('recruiter_edit_phase_page', phase_id=p.id) }}" class="plan-button">Bewerk</a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="empty-state">Nog geen fases. Voeg hieronder een fase toe.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-container shadow">
+    <div class="section-header">
+      <h3 class="section-title">Nieuwe fase toevoegen</h3>
+      <p class="section-subtitle">Kies een gepubliceerde templateversie (draft templates kunnen niet gekoppeld worden).
+      </p>
+    </div>
+
+    <form method="POST" action="{{ url_for('recruiter_create_phase_action', job_id=job.id) }}"
+      class="inline-form-block">
+      <div class="form-row">
+        <div class="form-group grow">
+          <label class="form-label">Fase-naam</label>
+          <input class="input-field" type="text" name="phase_name" placeholder="bv. Recruiter screening" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Volgnummer</label>
+          <input class="input-field" type="number" name="sequence_number" min="1" placeholder="Auto">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group grow">
+          <label class="form-label">Template (published)</label>
+          <select class="input-field" name="template_version_id" required>
+            <option value="" selected disabled>Kies template...</option>
+            {% for tv in published_templates %}
+            <option value="{{ tv.id }}">
+              {{ tv.template_name }} · v{{ tv.version_number }}{% if tv.version_label %} · {{ tv.version_label }}{%
+              endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Actief</label>
+          <select class="input-field" name="is_active">
+            <option value="1" selected>Ja</option>
+            <option value="0">Nee</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">&nbsp;</label>
+          <button type="submit" class="download-button">Toevoegen</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="page-actions">
+    <a href="{{ url_for('job_posting_detail_page', job_id=job.id) }}" class="cancel-button">Terug naar vacature</a>
+    <a href="{{ url_for('recruiter_review_queue_page') }}" class="cancel-button">Review queue</a>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-container">
+  <div class="form-content-wrapper">
+    <div class="card shadow form-card">
+
+      <div class="card-header form-header">
+        <h4 class="header-title">Interviewer-toewijzing per fase</h4>
+        <p class="text-muted mb-0">Vacature: <strong>{{ job.title }}</strong></p>
+        <p class="text-muted small mb-0">Fase 1 is automatisch (recruiter/admin die plant).</p>
+      </div>
+
+      <div class="card-body form-body">
+
+        {% if not phases or phases|length == 0 %}
+          <div class="alert alert-warning">Geen fases gevonden.</div>
+        {% else %}
+
+          {% for phase in phases %}
+            <div class="evaluation-block" style="margin-bottom:18px;">
+              <h5 class="mb-2">
+                {{ phase.sequence_number }} — {{ phase.phase_name }}
+                {% if first_phase_id and phase.id == first_phase_id %}
+                  <span class="text-muted small"> (automatisch)</span>
+                {% endif %}
+              </h5>
+
+              {% if first_phase_id and phase.id == first_phase_id %}
+                <p class="text-muted small">Voor fase 1 hoef je niets toe te wijzen.</p>
+              {% else %}
+                <form method="POST" action="{{ url_for('manager_update_phase_interviewers_action', phase_id=phase.id) }}">
+                  <div class="form-group">
+                    <label class="form-label">Kies interviewers voor deze fase</label>
+
+                    <div style="display:grid; gap:8px;">
+                      {% for person in interviewers %}
+                        {% set checked = (assigned_map.get(phase.id, []) and person.id in assigned_map.get(phase.id, [])) %}
+                        <label style="display:flex; gap:10px; align-items:center;">
+                          <input type="checkbox" name="interviewer_ids" value="{{ person.id }}" {% if checked %}checked{% endif %}>
+                          <span>
+                            {% if person.full_name %}{{ person.full_name }}{% else %}{{ person.email_address }}{% endif %}
+                            <span class="text-muted small">({{ person.email_address }})</span>
+                          </span>
+                        </label>
+                      {% endfor %}
+                    </div>
+                  </div>
+
+                  <button type="submit" class="submit-button">Opslaan</button>
+
+                  {% if assigned_labels_map.get(phase.id) %}
+                    <p class="text-muted small" style="margin-top:10px;">
+                      Huidig: {{ assigned_labels_map.get(phase.id)|join(', ') }}
+                    </p>
+                  {% endif %}
+                </form>
+              {% endif %}
+
+              <hr class="my-4">
+            </div>
+          {% endfor %}
+
+        {% endif %}
+
+        <div class="page-actions">
+          <a href="{{ url_for('manager_job_postings_page') }}" class="cancel-button">Terug</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

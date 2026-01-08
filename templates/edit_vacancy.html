@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-container">
+
+  <div class="dashboard-welcome-banner">
+    <div>
+      <h2 class="welcome-title">Vacature aanpassen</h2>
+      <p class="welcome-subtitle">Werk je vacature bij en dien ze daarna opnieuw in voor review.</p>
+    </div>
+  </div>
+
+  <div class="form-content-wrapper">
+    <div class="card shadow form-card">
+
+      <div class="card-header form-header">
+        <h3 class="header-title">Vacaturegegevens</h3>
+        {% if job.status == 'changes_requested' %}
+          <p class="text-muted mb-0">
+            Deze vacature staat op <strong>Changes requested</strong>. Na opslaan gaat ze terug naar <strong>Draft</strong>.
+          </p>
+        {% endif %}
+      </div>
+
+      <div class="card-body form-body">
+        <form method="POST">
+
+          <div class="form-group">
+            <label class="form-label" for="vacancyTitle">Functietitel</label>
+            <input class="input-field" type="text" id="vacancyTitle" name="vacancy_title" value="{{ job.title }}" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="vacancyDepartment">Afdeling</label>
+            <input class="input-field" type="text" id="vacancyDepartment" name="vacancy_department" value="{{ job.department }}" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="vacancyLocation">Locatie (optioneel)</label>
+            <input class="input-field" type="text" id="vacancyLocation" name="vacancy_location" value="{{ job.location or '' }}" placeholder="bv. Brussel / Hybrid">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="employmentType">Type tewerkstelling (optioneel)</label>
+            <select class="input-field" id="employmentType" name="employment_type">
+              {% set current_employment_type = job.employment_type or '' %}
+              <option value="" {% if current_employment_type == '' %}selected{% endif %}>— Kies (optioneel) —</option>
+              <option value="Full-time" {% if current_employment_type == 'Full-time' %}selected{% endif %}>Full-time</option>
+              <option value="Part-time" {% if current_employment_type == 'Part-time' %}selected{% endif %}>Part-time</option>
+              <option value="Internship" {% if current_employment_type == 'Internship' %}selected{% endif %}>Stage</option>
+              <option value="Temporary" {% if current_employment_type == 'Temporary' %}selected{% endif %}>Tijdelijk</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="experienceLevel">Ervaringsniveau (optioneel)</label>
+            <select class="input-field" id="experienceLevel" name="experience_level">
+              {% set current_experience_level = job.experience_level or '' %}
+              <option value="" {% if current_experience_level == '' %}selected{% endif %}>— Kies (optioneel) —</option>
+              <option value="Junior" {% if current_experience_level == 'Junior' %}selected{% endif %}>Junior</option>
+              <option value="Medior" {% if current_experience_level == 'Medior' %}selected{% endif %}>Medior</option>
+              <option value="Senior" {% if current_experience_level == 'Senior' %}selected{% endif %}>Senior</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="vacancyDescription">Functieomschrijving</label>
+            <textarea class="input-field textarea-field" id="vacancyDescription" name="vacancy_description" rows="7" required>{{ job.description }}</textarea>
+          </div>
+
+          <div class="button-group">
+            <a href="{{ url_for('manager_job_postings_page') }}" class="cancel-button">Annuleren</a>
+            <button type="submit" class="submit-button">Wijzigingen opslaan</button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

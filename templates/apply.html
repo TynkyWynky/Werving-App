@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+    <div class="form-content-wrapper">
+        <div class="card shadow form-card">
+
+            <div class="card-header form-header">
+                <h4 class="header-title">Solliciteren: {{ vacancy.title }}</h4>
+
+                {% if vacancy.department %}
+                    <p class="text-muted mb-0">Afdeling: <strong>{{ vacancy.department }}</strong></p>
+                {% endif %}
+
+                {% if vacancy.location %}
+                    <p class="text-muted mb-0">Locatie: <strong>{{ vacancy.location }}</strong></p>
+                {% endif %}
+
+                <p class="text-muted mb-0">
+                    Na het indienen krijg je een tracking link om je sollicitatiestatus te volgen en (indien nodig) in te trekken.
+                </p>
+            </div>
+
+            <div class="card-body form-body">
+                <form method="POST" enctype="multipart/form-data">
+
+                    <div class="form-group">
+                        <label for="candidateFullName" class="form-label">Volledige naam</label>
+                        <input
+                            type="text"
+                            class="input-field"
+                            name="candidate_name"
+                            id="candidateFullName"
+                            required
+                            placeholder="Jan Jansen"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="candidateEmail" class="form-label">E-mailadres</label>
+                        <input
+                            type="email"
+                            class="input-field"
+                            name="candidate_email"
+                            id="candidateEmail"
+                            required
+                            placeholder="jan@voorbeeld.be"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="candidateMotivation" class="form-label">Motivatie (optioneel)</label>
+                        <textarea
+                            class="input-field textarea-field"
+                            name="candidate_motivation"
+                            id="candidateMotivation"
+                            rows="4"
+                            placeholder="Waarom past deze job bij jou? (kort)"
+                        ></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="candidateCv" class="form-label">Upload je CV (PDF/Word)</label>
+                        <input
+                            type="file"
+                            class="input-field"
+                            name="candidate_cv"
+                            id="candidateCv"
+                            required
+                            accept=".pdf,.doc,.docx"
+                        >
+                        <p class="text-muted small">
+                            Toegestane bestanden: .pdf, .doc, .docx
+                        </p>
+                    </div>
+
+                    <!-- GDPR consent -->
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="gdpr_consent" value="1" required>
+                            <span class="status-label-small">
+                                Ik geef toestemming dat mijn gegevens (incl. CV) verwerkt worden voor deze sollicitatie.
+                            </span>
+                        </label>
+                        <p class="text-muted small">
+                            Je kan je sollicitatie later intrekken via de tracking link. Dan stoppen we de verdere verwerking.
+                        </p>
+                    </div>
+
+                    <div class="button-group">
+                        <a href="{{ url_for('vacancy_list_page') }}" class="cancel-button">Annuleren</a>
+                        <button type="submit" class="submit-button manager-btn">Verstuur sollicitatie</button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

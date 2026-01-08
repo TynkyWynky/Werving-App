@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-container">
+
+    <div class="dashboard-welcome-banner">
+        <div>
+            <h2 class="welcome-title">Template beheer</h2>
+            <p class="welcome-subtitle">
+                Groep: <strong>{{ group.group_name }}</strong>
+            </p>
+        </div>
+
+        <div>
+            {% if published_version %}
+            <span class="status-pill status-published">Published v{{ published_version.version_number }}</span>
+            {% else %}
+            <span class="status-pill status-draft">Geen published versie</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="table-container shadow">
+        <div class="section-header">
+            <h3 class="section-title">Versies</h3>
+            <p class="section-subtitle">Maak een nieuwe versie, pas criteria aan, en publiceer wanneer klaar.</p>
+        </div>
+
+        <div class="action-group">
+            <form method="POST" action="{{ url_for('create_template_version_action', group_id=group.id) }}">
+                <button type="submit" class="download-button">Nieuwe versie</button>
+            </form>
+
+            <a href="{{ url_for('templates_manage_page') }}" class="cancel-button">Terug naar overzicht</a>
+        </div>
+
+        <div class="divider"></div>
+
+        <table class="candidate-table">
+            <thead>
+                <tr>
+                    <th>Versie</th>
+                    <th>Label</th>
+                    <th>Status</th>
+                    <th>Aangemaakt</th>
+                    <th>Acties</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for version in versions %}
+                <tr>
+                    <td class="font-bold">v{{ version.version_number }}</td>
+                    <td>{{ version.version_label or '—' }}</td>
+
+                    <td>
+                        <span class="status-pill status-{{ version.status }}">
+                            {{ version.status }}
+                        </span>
+                    </td>
+
+                    <td>{{ (version.created_at or '')[:19] }}</td>
+
+                    <td>
+                        <div class="action-group">
+                            <a href="{{ url_for('template_version_edit_page', version_id=version.id) }}"
+                                class="plan-button">
+                                Criteria beheren
+                            </a>
+
+                            {% if version.status != 'published' %}
+                            <form method="POST"
+                                action="{{ url_for('publish_template_version_action', version_id=version.id) }}">
+                                <button type="submit" class="download-button">Publish</button>
+                            </form>
+
+                            <form method="POST"
+                                action="{{ url_for('delete_template_version_action', version_id=version.id) }}"
+                                onsubmit="return confirm('Deze versie verwijderen? Dit kan enkel als ze niet gebruikt wordt in fases/interviews.');">
+                                <button type="submit" class="cancel-button">Verwijderen</button>
+                            </form>
+                            {% else %}
+                            <span class="status-label-small">Actief</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="empty-state">Nog geen versies. Klik op “Nieuwe versie”.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock %}

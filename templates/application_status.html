@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+
+    <div class="dashboard-welcome-banner">
+        <div>
+            <h2 class="welcome-title">Sollicitatiestatus</h2>
+            <p class="welcome-subtitle">
+                Vacature: <strong>{{ application.vacancy_title }}</strong>
+                <span class="subtle-separator">•</span>
+                Kandidaat: <strong>{{ application.candidate_name }}</strong>
+                <span class="subtle-separator">•</span>
+                <a class="email-link" href="mailto:{{ application.candidate_email }}">{{ application.candidate_email
+                    }}</a>
+            </p>
+        </div>
+
+        <div>
+            <span class="status-pill">
+                {{ status_labels.get(application.status, application.status) }}
+            </span>
+        </div>
+    </div>
+
+    <div class="table-container shadow">
+        <div class="section-header">
+            <h3 class="section-title">Huidige status</h3>
+            <p class="section-subtitle">
+                {{ status_labels.get(application.status, application.status) }}
+            </p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="form-row">
+            <div class="form-group grow">
+                <p class="text-muted mb-0">
+                    <strong>Ingediend op:</strong> {{ (application.applied_at or '')[:19] }}
+                </p>
+
+                {% if application.withdrawn_at %}
+                <p class="text-muted mb-0">
+                    <strong>Ingetrokken op:</strong> {{ (application.withdrawn_at or '')[:19] }}
+                </p>
+                {% endif %}
+
+                {% if application.withdrawn_reason %}
+                <p class="text-muted mb-0">
+                    <strong>Reden:</strong> {{ application.withdrawn_reason }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Withdraw block (alleen als niet-final) #}
+    {% set final_statuses = ['withdrawn', 'rejected', 'hired'] %}
+    {% if application.status not in final_statuses %}
+
+    {% if upcoming_interview %}
+    <div class="card shadow form-card" style="margin-top:16px;">
+        <div class="card-header form-header">
+            <h4 class="header-title">Gepland interview</h4>
+        </div>
+
+        <div class="card-body form-body">
+            <p class="text-muted mb-2">
+                <strong>Fase:</strong> {{ upcoming_interview.phase_name or "Interview" }}
+            </p>
+
+            <p class="text-muted mb-2">
+                <strong>Datum & tijd:</strong> {{ upcoming_interview.scheduled_start }}
+            </p>
+
+            {% if upcoming_interview.location %}
+            <p class="text-muted mb-2">
+                <strong>Locatie:</strong> {{ upcoming_interview.location }}
+            </p>
+            {% endif %}
+
+            {% if upcoming_interview.meeting_link %}
+            <p class="text-muted mb-0">
+                <strong>Teams link:</strong>
+                <a class="email-link" href="{{ upcoming_interview.meeting_link }}" target="_blank" rel="noopener">
+                    Open meeting
+                </a>
+            </p>
+            {% else %}
+            <p class="text-muted mb-0">
+                <strong>Meeting link:</strong> Nog niet ingevuld.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+
+    {% endif %}
+
+    <div class="page-actions">
+        <a href="{{ url_for('vacancy_list_page') }}" class="cancel-button">Terug naar vacatures</a>
+    </div>
+
+</div>
+{% endblock %}

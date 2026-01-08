@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+
+  <div class="dashboard-welcome-banner">
+    <h2 class="welcome-title">Mijn Agenda</h2>
+    <p class="welcome-subtitle">Geplande sollicitatiegesprekken.</p>
+  </div>
+
+  <div class="table-container shadow">
+    <table class="candidate-table">
+      <thead>
+        <tr>
+          <th>Datum & Tijd</th>
+          <th>Kandidaat</th>
+          <th>Functie</th>
+          <th>Fase</th>
+          <th>Status</th>
+          <th>Evaluatie</th>
+          <th>Actie</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for interview in interviews %}
+        <tr>
+          <td>{{ (interview.scheduled_start or '')[:16] }}</td>
+
+          <td class="font-bold">{{ interview.candidate_name }}</td>
+
+          <td>
+            <span class="vacancy-badge">{{ interview.vacancy_title }}</span>
+          </td>
+
+          <td>
+            <span class="status-label-small">{{ interview.phase_name or '-' }}</span>
+          </td>
+
+          <td>
+            {% if interview.status == 'planned' %}
+              <span class="status-planned">Gepland</span>
+            {% elif interview.status == 'completed' %}
+              <span class="status-completed">Afgerond</span>
+            {% else %}
+              <span class="status-pill"> {{ interview.status }} </span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if interview.evaluation_status == 'submitted' %}
+              <span class="status-pill status-published">Ingediend</span>
+            {% elif interview.evaluation_status == 'draft' %}
+              <span class="status-pill status-draft">Concept</span>
+            {% else %}
+              <span class="status-label-small">Nog niet gestart</span>
+            {% endif %}
+          </td>
+
+          <td class="actions-cell">
+
+            {% if interview.cv_path %}
+              <a
+                href="{{ url_for('download_file', filename=interview.cv_path) }}"
+                class="download-button margin-right-small"
+                target="_blank"
+                rel="noopener"
+              >
+                CV
+              </a>
+            {% else %}
+              <span class="status-label-small">Geen CV</span>
+            {% endif %}
+
+            {% if interview.evaluation_status == 'submitted' %}
+              <a href="{{ url_for('evaluate_page', interview_id=interview.id) }}" class="btn-result">
+                Bekijken
+              </a>
+            {% elif interview.evaluation_status == 'draft' %}
+              <a href="{{ url_for('evaluate_page', interview_id=interview.id) }}" class="btn-result">
+                Verder werken
+              </a>
+            {% else %}
+              <a href="{{ url_for('evaluate_page', interview_id=interview.id) }}" class="btn-result">
+                Start evaluatie
+              </a>
+            {% endif %}
+
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="empty-state">U heeft nog geen geplande gesprekken.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="page-actions">
+    <a href="{{ url_for('dashboard_page') }}" class="cancel-button">Terug naar Dashboard</a>
+  </div>
+
+</div>
+{% endblock %}

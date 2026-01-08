@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-container">
+
+  <div class="dashboard-welcome-banner">
+    <div>
+      <h2 class="welcome-title">Criteria beheren</h2>
+      <p class="welcome-subtitle">
+        {% if group is defined and group %}
+          Groep: <strong>{{ group.group_name }}</strong> ·
+        {% endif %}
+        Versie:
+        <strong>
+          {% if version is defined and version and version.version_number is defined %}
+            v{{ version.version_number }}
+          {% else %}
+            —
+          {% endif %}
+        </strong>
+        {% if version is defined and version and version.version_label %}
+          <span class="subtle-separator">•</span>{{ version.version_label }}
+        {% endif %}
+      </p>
+    </div>
+
+    <div>
+      {% if version is defined and version and version.status %}
+        <span class="status-pill status-{{ version.status }}">{{ version.status }}</span>
+      {% else %}
+        <span class="status-pill status-draft">draft</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="table-container shadow">
+    <div class="section-header">
+      <h3 class="section-title">Nieuw criterium toevoegen</h3>
+      <p class="section-subtitle">Voeg een criterium toe dat interviewers kunnen scoren.</p>
+    </div>
+
+    <form
+      method="POST"
+      action="{{ url_for('create_template_aspect_action', version_id=version.id) }}"
+      class="inline-form-block"
+    >
+      <div class="form-row">
+        <div class="form-group grow">
+          <label for="criterionTitle" class="form-label">Titel</label>
+          <input
+            id="criterionTitle"
+            class="input-field"
+            type="text"
+            name="aspect_title"
+            placeholder="bv. Communicatie"
+            required
+          >
+        </div>
+
+        <div class="form-group grow">
+          <label for="criterionDescription" class="form-label">Beschrijving (optioneel)</label>
+          <input
+            id="criterionDescription"
+            class="input-field"
+            type="text"
+            name="aspect_description"
+            placeholder="bv. Duidelijk en gestructureerd communiceren"
+          >
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="minScore" class="form-label">Min score</label>
+          <select id="minScore" name="min_score" class="input-field" required>
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="maxScore" class="form-label">Max score</label>
+          <select id="maxScore" name="max_score" class="input-field" required>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5" selected>5</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="sortOrder" class="form-label">Volgorde</label>
+          <input
+            id="sortOrder"
+            class="input-field"
+            type="number"
+            name="sort_order"
+            value="10"
+            min="1"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Verplicht</label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="is_required" value="1" checked>
+            <span class="status-label-small">Ja</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">&nbsp;</label>
+          <button type="submit" class="download-button">Toevoegen</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="table-container shadow">
+    <div class="section-header">
+      <h3 class="section-title">Bestaande criteria</h3>
+      <p class="section-subtitle">Bewerk of verwijder criteria in deze versie.</p>
+    </div>
+
+    <table class="candidate-table">
+      <thead>
+        <tr>
+          <th>Volgorde</th>
+          <th>Titel</th>
+          <th>Beschrijving</th>
+          <th>Range</th>
+          <th>Verplicht</th>
+          <th>Acties</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for aspect in aspects %}
+        <tr>
+          <td class="font-bold">{{ aspect.sort_order or '—' }}</td>
+          <td class="font-bold">{{ aspect.aspect_title or aspect.name or '—' }}</td>
+          <td>{{ aspect.aspect_description or '—' }}</td>
+
+          <td>
+            {{ aspect.min_score or 1 }} → {{ aspect.max_score or 5 }}
+          </td>
+
+          <td>
+            {% if aspect.is_required is defined and (aspect.is_required == 1 or aspect.is_required == true) %}
+              <span class="status-pill status-published">Ja</span>
+            {% else %}
+              <span class="status-pill status-draft">Nee</span>
+            {% endif %}
+          </td>
+
+          <td>
+            <div class="action-group">
+              <!-- Update -->
+              <form method="POST" action="{{ url_for('update_template_aspect_action', aspect_id=aspect.id) }}" class="inline-form">
+
+                <input class="input-field inline-input" type="text" name="aspect_title"
+                       value="{{ aspect.aspect_title or '' }}" placeholder="Titel" required>
+
+                <input class="input-field inline-input" type="text" name="aspect_description"
+                       value="{{ aspect.aspect_description or '' }}" placeholder="Beschrijving">
+
+                <input class="input-field inline-input" type="number" name="sort_order"
+                       value="{{ aspect.sort_order or 10 }}" placeholder="Volgorde" min="1" required>
+
+                <select name="min_score" class="input-field inline-input" required>
+                  {% for value in range(1, 6) %}
+                    <option value="{{ value }}" {% if (aspect.min_score or 1) == value %}selected{% endif %}>{{ value }}</option>
+                  {% endfor %}
+                </select>
+
+                <select name="max_score" class="input-field inline-input" required>
+                  {% for value in range(1, 6) %}
+                    <option value="{{ value }}" {% if (aspect.max_score or 5) == value %}selected{% endif %}>{{ value }}</option>
+                  {% endfor %}
+                </select>
+
+                <label class="checkbox-label">
+                  <input type="checkbox" name="is_required" value="1"
+                         {% if aspect.is_required is defined and (aspect.is_required == 1 or aspect.is_required == true) %}checked{% endif %}>
+                  <span class="status-label-small">Verplicht</span>
+                </label>
+
+                <button type="submit" class="download-button">Opslaan</button>
+              </form>
+
+              <!-- Delete -->
+              <form method="POST"
+                    action="{{ url_for('delete_template_aspect_action', aspect_id=aspect.id) }}"
+                    onsubmit="return confirm('Criterium verwijderen? Dit kan niet ongedaan gemaakt worden.');">
+                <button type="submit" class="cancel-button">Verwijderen</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="empty-state">Nog geen criteria toegevoegd aan deze versie.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="page-actions">
+    {% if group is defined and group %}
+      <a href="{{ url_for('template_group_detail_page', group_id=group.id) }}" class="cancel-button">Terug</a>
+    {% else %}
+      <a href="{{ url_for('templates_manage_page') }}" class="cancel-button">Terug</a>
+    {% endif %}
+
+    {% if version is defined and version and version.status != 'published' %}
+      {% if aspects|length < 3 %}
+        <span class="status-label-small">
+          Voeg minstens 3 criteria toe om te publishen (nu: {{ aspects|length }})
+        </span>
+      {% else %}
+        <form method="POST" action="{{ url_for('publish_template_version_action', version_id=version.id) }}">
+          <button type="submit" class="download-button">Publish versie</button>
+        </form>
+      {% endif %}
+    {% else %}
+      <span class="status-label-small">Deze versie is published</span>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

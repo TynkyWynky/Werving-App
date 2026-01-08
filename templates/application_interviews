@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+
+  <div class="dashboard-welcome-banner">
+    <div>
+      <h2 class="welcome-title">Interviews — {{ application.candidate_name }}</h2>
+
+      <p class="welcome-subtitle">
+        Vacature: <strong>{{ application.vacancy_title }}</strong>
+        <span class="subtle-separator">•</span>
+        Status: <strong>{{ status_labels.get(application.app_status, application.app_status) }}</strong>
+      </p>
+
+      <p class="text-muted mb-0">
+        Email:
+        <a class="email-link" href="mailto:{{ application.candidate_email }}">{{ application.candidate_email }}</a>
+      </p>
+
+      {% if application.cv_path %}
+      <p class="text-muted mb-0">
+        CV:
+        <a class="download-button" href="{{ url_for('download_file', filename=application.cv_path) }}"
+           target="_blank" rel="noopener">
+          Open CV
+        </a>
+      </p>
+      {% endif %}
+    </div>
+
+    <div class="action-group">
+      <a href="{{ url_for('plan_interview_page', application_id=application.id) }}" class="plan-button">
+        Plan interview
+      </a>
+
+      <a href="{{ url_for('my_interviews_page') }}" class="plan-button">
+        Mijn agenda
+      </a>
+
+      {% if application.app_status == 'interview' %}
+      <a href="{{ url_for('decision_page', application_id=application.id) }}" class="download-button">
+        Besluit
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="table-container shadow">
+    <table class="candidate-table">
+      <thead>
+        <tr>
+          <th>Fase</th>
+          <th>Datum/tijd</th>
+          <th>Status</th>
+          <th>Interviewers</th>
+          <th>Evaluaties</th>
+          <th>Actie</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for i in interviews %}
+        <tr>
+          <td>
+            <div class="font-bold">
+              {% if i.sequence_number %}#{{ i.sequence_number }} —{% endif %}
+              {{ i.phase_name or "—" }}
+            </div>
+          </td>
+
+          <td>
+            <span class="status-label-small">{{ i.scheduled_start or "—" }}</span>
+            {% if i.meeting_link %}
+              <div style="margin-top:6px;">
+                <a class="email-link" href="{{ i.meeting_link }}" target="_blank" rel="noopener">Teams link</a>
+              </div>
+            {% endif %}
+          </td>
+
+          <td>
+            <span class="status-pill status-{{ i.interview_status }}">{{ i.interview_status }}</span>
+          </td>
+
+          <td>
+            {% if i.interviewer_list %}
+              <span class="status-label-small">{{ i.interviewer_list }}</span>
+            {% else %}
+              <span class="status-label-small">—</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% set total = i.interviewer_count or 0 %}
+            {% set submitted = i.submitted_count or 0 %}
+            <span class="status-label-small">{{ submitted }}/{{ total }} submitted</span>
+
+            {% if i.can_evaluate %}
+              <div style="margin-top:6px;">
+                <span class="status-label-small">Mijn evaluatie: {{ i.my_evaluation_status or "—" }}</span>
+              </div>
+            {% endif %}
+          </td>
+
+          <td>
+            <div class="action-group">
+              {% if i.can_evaluate %}
+                <a href="{{ url_for('evaluate_page', interview_id=i.id) }}" class="plan-button">
+                  Evalueren
+                </a>
+              {% else %}
+                <span class="status-label-small">Geen actie</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="empty-state">Nog geen interviews gepland voor deze sollicitatie.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="page-actions">
+    <a href="{{ url_for('recruiter_applications_page') }}" class="cancel-button">Terug</a>
+  </div>
+
+</div>
+{% endblock %}

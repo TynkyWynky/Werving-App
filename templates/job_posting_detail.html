@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-container">
+
+    {% set role = session.get('user_role') %}
+    {% set back_status = request.args.get('back_status', 'pending_review') %}
+
+    <div class="dashboard-welcome-banner">
+        <div>
+            <h2 class="welcome-title">{{ job.title }}</h2>
+            <p class="welcome-subtitle">
+                Afdeling: <strong>{{ job.department }}</strong> · Aanwervingsmanager: <strong>{{ job.manager_email }}</strong>
+            </p>
+        </div>
+
+        <div>
+            <span class="status-pill status-{{ job.status }}">
+                {{ status_labels.get(job.status, job.status) }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Feedback recruiter -->
+    {% if job.review_comment %}
+    <div class="callout callout-warning">
+        <div class="callout-title">Feedback van de recruiter</div>
+        <div class="callout-body">{{ job.review_comment }}</div>
+    </div>
+    {% endif %}
+
+    {# Optioneel: toon een publicatiecheck waarschuwing indien meegegeven door backend.
+       Indien niet meegegeven, ondersteunen we nog steeds fases als je die later doorgeeft.
+    #}
+    {% if role == 'recruiter' and job.status == 'pending_review' %}
+    {% if publish_checks is defined and publish_checks %}
+    {% if not publish_checks.is_ready %}
+    <div class="callout callout-warning">
+        <div class="callout-title">Publicatiecheck</div>
+        <div class="callout-body">
+            <p class="mb-0">Deze vacature is nog niet volledig klaar om te publiceren:</p>
+            <ul class="callout-list">
+                {% for item in publish_checks.missing_items %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+            <p class="text-muted small mb-0">
+                Tip: voeg interviewfases toe en koppel een evaluatiesjabloon per fase.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    {% elif phases is defined %}
+    {% if not phases or phases|length == 0 %}
+    <div class="callout callout-warning">
+        <div class="callout-title">Publicatiecheck</div>
+        <div class="callout-body">
+            Deze vacature heeft nog geen interviewfases. Voeg fases toe voordat je publiceert.
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+
+    <!-- Beschrijving -->
+    <div class="table-container shadow job-detail-card">
+        <div class="job-detail-header">
+            <h3 class="job-detail-title">Functieomschrijving</h3>
+        </div>
+        <div class="job-detail-body">
+            <div class="job-description-block">{{ job.description }}</div>
+
+            <!-- Interviewfases -->
+            <div class="table-container shadow job-detail-card">
+                <div class="job-detail-header">
+                    <h3 class="job-detail-title">Interviewfases</h3>
+
+                    {% if role in ['recruiter', 'admin'] %}
+                    <a href="{{ url_for('recruiter_manage_phases_page', job_id=job.id) }}" class="plan-button">Fases beheren</a>
+                    {% endif %}
+
+                    {% if role == 'manager' %}
+                    <a href="{{ url_for('manager_phase_interviewers_page', job_id=job.id) }}" class="plan-button">
+                        Interviewers toewijzen
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="job-detail-body">
+                    {% if phases is defined and phases and phases|length > 0 %}
+                    <table class="candidate-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Fase</th>
+                                <th>Actief</th>
+                                <th>Sjabloon</th>
+                                <th>Criteria</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in phases %}
+                            <tr>
+                                <td class="font-bold">{{ p.sequence_number }}</td>
+                                <td>{{ p.phase_name }}</td>
+                                <td>
+                                    {% if p.is_active %}
+                                    <span class="status-pill status-published">Actief</span>
+                                    {% else %}
+                                    <span class="status-pill status-closed">Inactief</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if p.template_group_name %}
+                                    <div class="font-bold">{{ p.template_group_name }}</div>
+                                    <div class="status-label-small">
+                                        v{{ p.template_version_number }}{% if p.template_version_label %} · {{ p.template_version_label }}{% endif %}
+                                    </div>
+                                    {% else %}
+                                    <span class="status-label-small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if p.aspect_count is not none %}
+                                    {{ p.aspect_count }}
+                                    {% else %}
+                                    —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if p.template_status %}
+                                    <span class="status-pill status-{{ p.template_status }}">{{ p.template_status }}</span>
+                                    {% else %}
+                                    <span class="status-label-small">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <p class="text-muted small mb-0">
+                        Publicatiecheck: elke actieve fase moet een <strong>gepubliceerd</strong> sjabloon hebben met
+                        <strong>minstens 3 criteria</strong>.
+                    </p>
+                    {% else %}
+                    <div class="empty-state">Nog geen interviewfases ingesteld voor deze vacature.</div>
+
+                    {% if role in ['recruiter', 'admin'] %}
+                    <div class="page-actions">
+                        <a href="{{ url_for('manage_job_phases_page', job_id=job.id) }}" class="download-button">Fase toevoegen</a>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Acties -->
+    <div class="table-container shadow job-detail-card">
+        <div class="job-detail-header">
+            <h3 class="job-detail-title">Acties</h3>
+        </div>
+
+        <div class="job-detail-body">
+
+            {% if role == 'recruiter' %}
+
+            {% if job.status == 'pending_review' %}
+            <div class="row-actions">
+
+                <form method="POST" action="{{ url_for('publish_job_posting_action', job_id=job.id) }}">
+                    <button type="submit" class="download-button">Publiceren</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('request_changes_job_posting_action', job_id=job.id) }}"
+                    class="inline-form">
+                    <input class="input-field inline-input" type="text" name="review_comment"
+                        placeholder="Feedback (verplicht)..." required>
+                    <button type="submit" class="cancel-button">Wijzigingen aanvragen</button>
+                </form>
+
+            </div>
+
+            <p class="text-muted small mb-0">
+                Tip: publiceer pas als de interviewfases en evaluatiecriteria klaar staan.
+            </p>
+
+            {% elif job.status == 'published' %}
+            <div class="row-actions">
+                <form method="POST" action="{{ url_for('close_job_posting_action', job_id=job.id) }}">
+                    <button type="submit" class="cancel-button">Sluiten</button>
+                </form>
+                <span class="status-label-small">Sluiten verbergt deze vacature op /vacatures</span>
+            </div>
+
+            {% else %}
+            <span class="status-label-small">Geen acties beschikbaar voor deze status.</span>
+            {% endif %}
+
+            {% elif role == 'manager' %}
+
+            <div class="row-actions">
+                {% if job.status in ['draft', 'changes_requested'] %}
+                <a href="{{ url_for('edit_job_posting_page', job_id=job.id) }}" class="plan-button">Bewerken</a>
+
+                <form method="POST" action="{{ url_for('submit_job_posting_for_review_action', job_id=job.id) }}">
+                    <button type="submit" class="download-button">Indienen voor review</button>
+                </form>
+                {% else %}
+                <span class="status-label-small">Geen acties beschikbaar</span>
+                {% endif %}
+            </div>
+
+            {% else %}
+            <span class="status-label-small">Je hebt geen toegang tot acties.</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="page-actions">
+        {% if role == 'recruiter' %}
+        <a href="{{ url_for('recruiter_review_queue_page', status=back_status) }}" class="cancel-button">Terug</a>
+        {% else %}
+        <a href="{{ url_for('manager_job_postings_page') }}" class="cancel-button">Terug</a>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

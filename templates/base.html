@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bedrijf X | Wervingsportaal</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <link rel="icon"
+          href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏢</text></svg>">
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+
+    {% set role_label = {
+        'manager': 'Manager',
+        'recruiter': 'Recruiter',
+        'interviewer': 'Interviewer',
+        'admin': 'Admin'
+    }.get(session.get('user_role'), session.get('user_role')) %}
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('vacancy_list_page') }}" class="nav-logo" aria-label="Ga naar vacatures">
+                Werving&Selectie</span>
+            </a>
+
+            <div class="nav-links">
+                <a href="{{ url_for('vacancy_list_page') }}" class="nav-btn btn-ghost">Vacatures</a>
+
+                {% if session.get('user_id') %}
+                    <span class="welcome-text">Hoi, {{ role_label }}</span>
+
+                    <a href="{{ url_for('dashboard_page') }}" class="nav-btn btn-outline">Dashboard</a>
+
+                    {% if session.get('user_role') == 'manager' %}
+                        <a href="{{ url_for('manager_job_postings_page') }}" class="nav-btn btn-outline">Mijn vacatures</a>
+                        <a href="{{ url_for('create_vacancy_page') }}" class="nav-btn btn-primary">Nieuwe vacature</a>
+                    {% elif session.get('user_role') in ['recruiter', 'admin'] %}
+                        <a href="{{ url_for('recruiter_review_queue_page') }}" class="nav-btn btn-outline">Reviewwachtrij</a>
+                        <a href="{{ url_for('recruiter_applications_page') }}" class="nav-btn btn-outline">Sollicitaties</a>
+                        <a href="{{ url_for('templates_manage_page') }}" class="nav-btn btn-outline">sjablonen</a>
+                    {% elif session.get('user_role') == 'interviewer' %}
+                        <a href="{{ url_for('my_interviews_page') }}" class="nav-btn btn-outline">Mijn interviews</a>
+                    {% endif %}
+
+                    <a href="{{ url_for('logout_action') }}" class="nav-btn btn-primary">Uitloggen</a>
+
+                {% elif request.endpoint != 'login_page' %}
+                    <a href="{{ url_for('login_page') }}" class="nav-btn btn-primary">login</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    {% with flashed = get_flashed_messages(with_categories=true) %}
+        {% if flashed %}
+            <div class="feedback-message-container" role="status" aria-live="polite">
+                {% for category, message in flashed %}
+                    <div class="feedback-message-box feedback-{{ category|e }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <main class="page-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2026 Bedrijf X Werving. Alle rechten voorbehouden.</p>
+            <p class="footer-note">Gemaakt voor demo doeleinden.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

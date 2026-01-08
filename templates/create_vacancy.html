@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+
+    <div class="form-content-wrapper">
+        <div class="card shadow form-card">
+
+            <div class="card-header form-header">
+                <h4 class="header-title">Nieuwe Vacature Opstellen</h4>
+                <p class="text-muted mb-0">
+                    Je vacature wordt eerst opgeslagen als <strong>Draft</strong>. Daarna kan je ze indienen voor review.
+                </p>
+            </div>
+
+            <div class="card-body form-body">
+                <form method="POST">
+
+                    <div class="form-group">
+                        <label for="vacancyTitle" class="form-label">Functietitel</label>
+                        <input
+                            type="text"
+                            class="input-field"
+                            name="vacancy_title"
+                            id="vacancyTitle"
+                            placeholder="bv. Junior IT Support"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vacancyDepartment" class="form-label">Afdeling</label>
+                        <input
+                            type="text"
+                            class="input-field"
+                            name="vacancy_department"
+                            id="vacancyDepartment"
+                            placeholder="bv. IT"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vacancyLocation" class="form-label">Locatie (optioneel)</label>
+                        <input
+                            type="text"
+                            class="input-field"
+                            name="vacancy_location"
+                            id="vacancyLocation"
+                            placeholder="bv. Brussel / Hybrid"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="employmentType" class="form-label">Type tewerkstelling (optioneel)</label>
+                        <select class="input-field" name="employment_type" id="employmentType">
+                            <option value="" selected>— Kies (optioneel) —</option>
+                            <option value="Full-time">Full-time</option>
+                            <option value="Part-time">Part-time</option>
+                            <option value="Internship">Stage</option>
+                            <option value="Temporary">Tijdelijk</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="experienceLevel" class="form-label">Ervaringsniveau (optioneel)</label>
+                        <select class="input-field" name="experience_level" id="experienceLevel">
+                            <option value="" selected>— Kies (optioneel) —</option>
+                            <option value="Junior">Junior</option>
+                            <option value="Medior">Medior</option>
+                            <option value="Senior">Senior</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vacancyDescription" class="form-label">Functieomschrijving</label>
+                        <textarea
+                            class="input-field textarea-field"
+                            name="vacancy_description"
+                            id="vacancyDescription"
+                            rows="6"
+                            placeholder="Beschrijf de taken, vereisten en extra info..."
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="button-group">
+                        <a href="{{ url_for('dashboard_page') }}" class="cancel-button">Annuleren</a>
+                        <button type="submit" class="submit-button manager-btn">Opslaan als draft</button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

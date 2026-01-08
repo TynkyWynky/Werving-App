@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+
+    <div class="dashboard-welcome-banner">
+        <h2 class="welcome-title">Binnengekomen Sollicitaties</h2>
+        <p class="welcome-subtitle">Overzicht van alle kandidaten en hun CV's.</p>
+    </div>
+
+    <!-- Filters + Search (Recruiter/Admin) -->
+    <div class="table-container shadow filter-panel">
+        <form method="GET" action="{{ url_for('recruiter_applications_page') }}" class="filter-form">
+
+            <div class="filter-group">
+                <label for="searchQuery">Search</label>
+                <input id="searchQuery" type="text" name="q" value="{{ search_query }}" placeholder="Name or email...">
+            </div>
+
+            <div class="filter-group">
+                <label for="statusFilter">Status</label>
+                <select id="statusFilter" name="status">
+                    {% for value, label in status_options %}
+                    <option value="{{ value }}" {% if selected_status==value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group filter-group-wide">
+                <label for="vacancyFilter">Vacancy</label>
+                <select id="vacancyFilter" name="vacancy_id">
+                    <option value="all" {% if selected_vacancy_id=='all' %}selected{% endif %}>All</option>
+                    {% for vacancy in vacancy_options %}
+                    <option value="{{ vacancy.id }}" {% if selected_vacancy_id==(vacancy.id|string) %}selected{% endif
+                        %}>
+                        {{ vacancy.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="plan-button">Apply</button>
+                <a href="{{ url_for('recruiter_applications_page') }}" class="cancel-button">Reset</a>
+            </div>
+
+        </form>
+    </div>
+
+    <div class="table-container shadow">
+        <table class="candidate-table">
+            <thead>
+                <tr>
+                    <th>Datum</th>
+                    <th>Naam Kandidaat</th>
+                    <th>Emailadres</th>
+                    <th>Vacature</th>
+                    <th>Status</th>
+                    <th>Actie</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for application in applications %}
+                <tr>
+                    <td>{{ (application.applied_at or '')[:10] }}</td>
+
+                    <td class="font-bold">{{ application.candidate_name }}</td>
+
+                    <td>
+                        <a href="mailto:{{ application.candidate_email }}" class="email-link">
+                            {{ application.candidate_email }}
+                        </a>
+                    </td>
+
+                    <td>
+                        <span class="vacancy-badge">{{ application.vacancy_title }}</span>
+                    </td>
+
+                    <td>
+                        <span class="status-pill status-{{ application.app_status }}">
+                            {{ status_labels.get(application.app_status, application.app_status) }}
+                        </span>
+                    </td>
+
+                    <td class="actions-cell">
+
+                        {% if application.cv_path %}
+                        <a href="{{ url_for('download_file', filename=application.cv_path) }}"
+                            class="download-button margin-right-small" target="_blank" rel="noopener">
+                            CV
+                        </a>
+                        {% else %}
+                        <span class="status-label-small">Geen CV</span>
+                        {% endif %}
+
+                        {% if application.app_status == 'withdrawn' %}
+                        <span class="badge bg-neutral">Ingetrokken</span>
+
+                        {% elif application.app_status == 'hired' %}
+                        <span class="badge bg-success">Aangenomen!</span>
+
+                        {% elif application.app_status == 'rejected' %}
+                        <span class="badge bg-danger">Afgewezen</span>
+
+                        {% elif application.interview_status == 'planned' %}
+                        <div class="action-group">
+                            <span class="status-label-small">Gesprek gepland</span>
+
+                            <a href="{{ url_for('plan_interview_page', application_id=application.id) }}"
+                                class="plan-button">
+                                Plan volgende
+                            </a>
+
+                            <a href="{{ url_for('my_interviews_page') }}" class="plan-button">
+                                Mijn agenda
+                            </a>
+                        </div>
+
+
+                        {% elif application.interview_status == 'planned' %}
+                        <div class="action-group">
+                            <span class="status-label-small">Gesprek gepland</span>
+
+                            <a href="{{ url_for('recruiter_application_interviews_page', application_id=application.id) }}"
+                                class="plan-button">
+                                Interviews
+                            </a>
+
+                            <a href="{{ url_for('plan_interview_page', application_id=application.id) }}"
+                                class="plan-button">
+                                Plan volgende
+                            </a>
+                        </div>
+                        {% elif application.interview_status == 'planned' %}
+                        <div class="action-group">
+                            <span class="status-label-small">Gesprek gepland</span>
+
+                            <a href="{{ url_for('recruiter_application_interviews_page', application_id=application.id) }}"
+                                class="plan-button">
+                                Interviews
+                            </a>
+
+                            <a href="{{ url_for('plan_interview_page', application_id=application.id) }}"
+                                class="plan-button">
+                                Plan volgende
+                            </a>
+                        </div>
+
+
+
+                        {% else %}
+                        <!-- Screening actions (Recruiter/Admin) -->
+                        <div class="action-group">
+
+                            <form method="POST"
+                                action="{{ url_for('recruiter_update_application_status_action', application_id=application.id) }}">
+                                <input type="hidden" name="new_status" value="in_review">
+                                <button type="submit" class="plan-button">In review</button>
+                            </form>
+
+                            <form method="POST"
+                                action="{{ url_for('recruiter_update_application_status_action', application_id=application.id) }}">
+                                <input type="hidden" name="new_status" value="shortlisted">
+                                <button type="submit" class="plan-button">Shortlist</button>
+                            </form>
+
+                            <form method="POST"
+                                action="{{ url_for('recruiter_update_application_status_action', application_id=application.id) }}">
+                                <input type="hidden" name="new_status" value="rejected">
+                                <button type="submit" class="cancel-button">Afwijzen</button>
+                            </form>
+
+                        </div>
+
+                        <!-- Plan interview (only after Shortlisted) -->
+                        <div class="action-secondary">
+                            {% if application.app_status == 'shortlisted' %}
+                            <a href="{{ url_for('plan_interview_page', application_id=application.id) }}"
+                                class="plan-button">
+                                Plan
+                            </a>
+                            {% else %}
+                            <span class="status-label-small">
+                                Shortlist eerst om te plannen
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="empty-state">Nog geen sollicitaties ontvangen.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard_page') }}" class="cancel-button">Terug naar Dashboard</a>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+
+    <div class="dashboard-welcome-banner">
+        <h2 class="welcome-title">Welkom op het dashboard</h2>
+        <p class="welcome-subtitle">
+            Uw rol:
+            <span class="role-badge role-{{ user_role }}">
+                {% if user_role == 'manager' %}Manager
+                {% elif user_role == 'recruiter' %}Recruiter
+                {% elif user_role == 'interviewer' %}Interviewer
+                {% elif user_role == 'admin' %}Admin
+                {% else %}{{ user_role }}
+                {% endif %}
+            </span>
+        </p>
+    </div>
+
+    {% if user_role == 'interviewer' %}
+    <div class="table-container shadow">
+        <div class="job-detail-header" style="padding: 18px 18px 0 18px;">
+            <h3 class="job-detail-title">Mijn agenda</h3>
+            <p class="text-muted mb-0">Bekijk uw geplande sollicitatiegesprekken.</p>
+
+            <div style="margin-top:12px;">
+                <a href="{{ url_for('my_interviews_page') }}" class="action-button interviewer-btn">Naar agenda</a>
+            </div>
+        </div>
+
+        <div class="job-detail-body">
+            <table class="candidate-table">
+                <thead>
+                    <tr>
+                        <th>Datum & Tijd</th>
+                        <th>Kandidaat</th>
+                        <th>Vacature</th>
+                        <th>Fase</th>
+                        <th>Evaluatie</th>
+                        <th>Actie</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for interview in upcoming_interviews %}
+                    <tr>
+                        <td>{{ (interview.scheduled_start or '')[:16] }}</td>
+                        <td class="font-bold">{{ interview.candidate_name }}</td>
+                        <td><span class="vacancy-badge">{{ interview.vacancy_title }}</span></td>
+                        <td><span class="status-label-small">{{ interview.phase_name or '-' }}</span></td>
+                        <td>
+                            {% if interview.evaluation_status == 'submitted' %}
+                              <span class="status-pill status-published">Ingediend</span>
+                            {% elif interview.evaluation_status == 'draft' %}
+                              <span class="status-pill status-draft">Concept</span>
+                            {% else %}
+                              <span class="status-label-small">Nog niet gestart</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('evaluate_page', interview_id=interview.id) }}" class="btn-result">
+                                Evalueren
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="empty-state">U heeft nog geen geplande gesprekken.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+
+    <div class="dashboard-action-grid">
+
+        {% if user_role == 'manager' %}
+        <div class="action-card">
+            <div class="card-content">
+                <h5 class="action-title manager-color">Nieuwe vacature</h5>
+                <p class="action-description">Maak een nieuwe vacature aan voor uw afdeling.</p>
+                <a href="{{ url_for('create_vacancy_page') }}" class="action-button manager-btn">Vacature aanmaken</a>
+            </div>
+        </div>
+
+        <div class="action-card">
+            <div class="card-content">
+                <h5 class="action-title manager-color">Mijn vacatures</h5>
+                <p class="action-description">Bekijk statussen en dien vacatures in voor review.</p>
+                <a href="{{ url_for('manager_job_postings_page') }}" class="action-button manager-btn">Bekijk vacatures</a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if user_role in ['recruiter', 'admin'] %}
+        <div class="action-card">
+            <div class="card-content">
+                <h5 class="action-title recruiter-color">Sollicitaties</h5>
+                <p class="action-description">Bekijk binnengekomen sollicitaties en beheer statussen.</p>
+                <a href="{{ url_for('recruiter_applications_page') }}" class="action-button recruiter-btn">Naar sollicitaties</a>
+            </div>
+        </div>
+
+        <div class="action-card">
+            <div class="card-content">
+                <h5 class="action-title recruiter-color">Vacatures review</h5>
+                <p class="action-description">Valideer vacatures en publiceer ze of vraag wijzigingen.</p>
+                <a href="{{ url_for('recruiter_review_queue_page') }}" class="action-button recruiter-btn">Naar review</a>
+            </div>
+        </div>
+
+        <div class="action-card">
+            <div class="card-content">
+                <h5 class="action-title recruiter-color">Templates & criteria</h5>
+                <p class="action-description">Beheer evaluatiecriteria en templates (UC-01).</p>
+                <a href="{{ url_for('templates_manage_page') }}" class="action-button recruiter-btn">Beheer templates</a>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

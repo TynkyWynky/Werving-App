@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+    <div class="form-content-wrapper">
+        <div class="card shadow form-card">
+
+            <div class="card-header form-header">
+                <h4 class="header-title">Beoordeling Invullen</h4>
+
+                <p class="text-muted mb-0">
+                    Kandidaat:
+                    <strong>
+                        {% if candidate and candidate.name %}{{ candidate.name }}
+                        {% elif candidate_name %}{{ candidate_name }}
+                        {% else %}Onbekend{% endif %}
+                    </strong>
+                    {% if candidate_email %}
+                        <span class="subtle-separator">•</span>
+                        <a class="email-link" href="mailto:{{ candidate_email }}">{{ candidate_email }}</a>
+                    {% endif %}
+                </p>
+
+                {% if vacancy_title %}
+                    <p class="text-muted mb-0">Vacature: <strong>{{ vacancy_title }}</strong></p>
+                {% endif %}
+
+                {% if phase_name %}
+                    <p class="text-muted mb-0">Fase: <strong>{{ phase_name }}</strong></p>
+                {% endif %}
+
+                {% if cv_path %}
+                    <p class="text-muted mb-0">
+                        CV:
+                        <a class="download-button" href="{{ url_for('download_file', filename=cv_path) }}" target="_blank" rel="noopener">
+                            Open CV
+                        </a>
+                    </p>
+                {% endif %}
+
+                <p class="text-muted small mb-0" style="margin-top: 8px;">
+                    Tip: je kan <strong>opslaan als concept</strong> en later terugkomen. Na <strong>indienen</strong> is de evaluatie definitief.
+                </p>
+            </div>
+
+            <div class="card-body form-body">
+                <form method="POST">
+
+                    <h5 class="mb-4">Competenties beoordelen (1 = Slecht, 5 = Uitstekend)</h5>
+
+                    {# Backwards/forwards compatible: aspects (new) OR questions (old) #}
+                    {% set criteria_list = aspects if aspects is defined and aspects else (questions if questions is defined else []) %}
+
+                    {% for criterion in criteria_list %}
+                        {% set criterion_title = criterion.aspect_title if criterion.aspect_title is defined else (criterion.name if criterion.name is defined else 'Criteria') %}
+                        {% set criterion_description = criterion.aspect_description if criterion.aspect_description is defined else None %}
+                        {% set min_score = criterion.min_score if criterion.min_score is defined else 1 %}
+                        {% set max_score = criterion.max_score if criterion.max_score is defined else 5 %}
+                        {% set is_required = (criterion.is_required == 1) if criterion.is_required is defined else True %}
+
+                        {# Existing values (new app.py sends existing_scores dict) #}
+                        {% set saved_score = None %}
+                        {% set saved_comment = '' %}
+                        {% if existing_scores is defined and existing_scores %}
+                            {% if criterion.id in existing_scores %}
+                                {% if existing_scores[criterion.id] is mapping %}
+                                    {% set saved_score = existing_scores[criterion.id].get('score') %}
+                                    {% set saved_comment = existing_scores[criterion.id].get('comment') or '' %}
+                                {% else %}
+                                    {# fallback if existing_scores is simple map id->score #}
+                                    {% set saved_score = existing_scores[criterion.id] %}
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+
+                        <div class="rating-row">
+                            <div class="rating-label">
+                                <div class="font-bold">{{ criterion_title }}</div>
+                                {% if criterion_description %}
+                                    <div class="text-muted small">{{ criterion_description }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="rating-options">
+                                {% for score_value in range(min_score, max_score + 1) %}
+                                    <label class="radio-label">
+                                        <input
+                                            type="radio"
+                                            name="score_{{ criterion.id }}"
+                                            value="{{ score_value }}"
+                                            {% if saved_score is not none and (saved_score|string) == (score_value|string) %}checked{% endif %}
+                                            {% if is_required and saved_score is none and score_value == min_score %}required{% endif %}
+                                        >
+                                        <span class="radio-number">{{ score_value }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="comment_{{ criterion.id }}">Opmerking (optioneel)</label>
+                            <textarea
+                                class="input-field textarea-field"
+                                name="comment_{{ criterion.id }}"
+                                id="comment_{{ criterion.id }}"
+                                rows="2"
+                                placeholder="Korte toelichting voor dit criterium..."
+                            >{{ saved_comment }}</textarea>
+                        </div>
+
+                        <hr class="my-4">
+                    {% else %}
+                        <p class="text-muted">Geen evaluatiecriteria gevonden voor deze fase/template.</p>
+                    {% endfor %}
+
+                    <div class="form-group">
+                        <label for="overallComment" class="form-label">Eindconclusie & Advies</label>
+                        <textarea
+                            class="input-field textarea-field"
+                            name="overall_comment"
+                            id="overallComment"
+                            rows="4"
+                            placeholder="Wat is uw eindoordeel? Advies: wel of niet aannemen?"
+                        >{{ existing_comment if existing_comment is defined else '' }}</textarea>
+                    </div>
+
+                    <div class="button-group">
+                        <a href="{{ url_for('my_interviews_page') }}" class="cancel-button">Annuleren</a>
+
+                        <button type="submit" name="action" value="save_draft" class="cancel-button">
+                            Opslaan als concept
+                        </button>
+
+                        <button type="submit" name="action" value="submit" class="submit-button recruiter-btn">
+                            Indienen
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+    <div class="form-content-wrapper">
+        <div class="card shadow form-card">
+
+            <div class="card-header form-header">
+                <h4 class="header-title">Gesprek Inplannen</h4>
+                <p class="text-muted mb-0">
+                    Kandidaat: <strong>{{ application.name }}</strong>
+                    {% if application.email %}
+                    <span class="subtle-separator">•</span>
+                    <a class="email-link" href="mailto:{{ application.email }}">{{ application.email }}</a>
+                    {% endif %}
+                </p>
+                <p class="text-muted mb-0">
+                    Vacature: <strong>{{ application.vacancy_title }}</strong>
+                </p>
+
+                {% if application.cv_path %}
+                <p class="text-muted mb-0">
+                    CV:
+                    <a class="download-button" href="{{ url_for('download_file', filename=application.cv_path) }}"
+                        target="_blank" rel="noopener">
+                        Open CV
+                    </a>
+                </p>
+                {% endif %}
+            </div>
+
+            <div class="card-body form-body">
+                <form method="POST">
+
+                    <!-- Phase selection -->
+                    <div class="form-group">
+                        <label for="phase" class="form-label">Selecteer fase</label>
+
+                        {% if phases and phases|length > 0 %}
+                        <select name="phase_id" id="phase" class="input-field" required
+                            data-suggested="{{ suggested_phase_id or '' }}">
+                            <option value="" disabled selected>Kies een fase...</option>
+                            {% for phase in phases %}
+                            <option value="{{ phase.id }}">
+                                {{ phase.sequence_number }} — {{ phase.phase_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
+                        <p class="status-label-small">
+                            Er zijn nog geen interviewfases geconfigureerd voor deze vacature.
+                        </p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Interviewer selection -->
+                    <div class="form-group">
+                        <label for="interviewer" class="form-label">Interviewers</label>
+                        <select name="selected_interviewers" id="interviewer" class="input-field" multiple size="6"
+                            disabled>
+                            <option value="" selected>Kies eerst een fase...</option>
+                        </select>
+                        <p id="interviewerHint" class="text-muted small" style="margin-top:8px;">
+                            Kies een fase om de toegewezen interviewers te zien.
+                        </p>
+                    </div>
+
+                    <!-- Date/time -->
+                    <div class="form-group">
+                        <label for="dateTime" class="form-label">Datum en tijd</label>
+                        <input type="datetime-local" class="input-field" name="interview_date" id="dateTime" required>
+                    </div>
+
+                    <!-- ✅ Teams altijd zichtbaar (ook fase 1) -->
+                    <div class="form-group">
+                        <label for="teamsLink" class="form-label">Teams-link (optioneel)</label>
+                        <input type="url" class="input-field" id="teamsLink" name="teams_link"
+                            placeholder="https://teams.microsoft.com/l/meetup-join/...">
+                        <p class="text-muted small" style="margin-top:6px;">
+                            Laat leeg als het gesprek fysiek is.
+                        </p>
+                    </div>
+
+                    <div class="button-group">
+                        <a href="{{ url_for('recruiter_applications_page') }}" class="cancel-button">Annuleren</a>
+                        <button id="submitBtn" type="submit" class="submit-button recruiter-btn" {% if not phases or
+                            phases|length==0 %}disabled{% endif %}>
+                            Inplannen
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Betrouwbare JSON (geen data-* escaping issues) -->
+<script type="application/json" id="firstPhaseIdJson">
+{{ first_phase_id|default(None)|tojson }}
+</script>
+
+<script type="application/json" id="phaseInterviewersMapJson">
+{{ phase_interviewers_map|default({})|tojson }}
+</script>
+
+<script>
+    (function () {
+        const phaseSelect = document.getElementById('phase');
+        const interviewerSelect = document.getElementById('interviewer');
+        const hint = document.getElementById('interviewerHint');
+        const submitBtn = document.getElementById('submitBtn');
+
+        const firstPhaseEl = document.getElementById('firstPhaseIdJson');
+        const mapEl = document.getElementById('phaseInterviewersMapJson');
+
+        if (!phaseSelect || !interviewerSelect || !hint || !firstPhaseEl || !mapEl) return;
+
+        let firstPhaseId = null;
+        let phaseInterviewersMap = {};
+
+        try {
+            firstPhaseId = JSON.parse(firstPhaseEl.textContent);
+        } catch (e) {
+            firstPhaseId = null;
+        }
+
+        try {
+            phaseInterviewersMap = JSON.parse(mapEl.textContent || "{}");
+        } catch (e) {
+            phaseInterviewersMap = {};
+        }
+
+        function setRequired(isRequired) {
+            interviewerSelect.required = Boolean(isRequired);
+        }
+
+        function setSubmitEnabled(enabled) {
+            if (!submitBtn) return;
+            const phasesExist = phaseSelect.options && phaseSelect.options.length > 1;
+            submitBtn.disabled = !enabled || !phasesExist;
+        }
+
+        function resetSelect(msg) {
+            interviewerSelect.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = msg;
+            opt.disabled = true;
+            opt.selected = true;
+            interviewerSelect.appendChild(opt);
+        }
+
+        function getListForPhase(phaseId) {
+            return phaseInterviewersMap[phaseId] || phaseInterviewersMap[String(phaseId)] || [];
+        }
+        
+        const suggested = phaseSelect.dataset.suggested;
+        if (suggested) {
+            phaseSelect.value = String(suggested);
+        }
+
+
+        function onPhaseChange() {
+            const selected = phaseSelect.value ? parseInt(phaseSelect.value, 10) : null;
+
+            if (!selected) {
+                interviewerSelect.disabled = true;
+                setRequired(false);
+                resetSelect('Kies eerst een fase...');
+                hint.textContent = 'Kies een fase om de toegewezen interviewers te zien.';
+                setSubmitEnabled(false);
+                return;
+            }
+
+            // Fase 1: recruiter/admin auto
+            if (firstPhaseId !== null && selected === firstPhaseId) {
+                interviewerSelect.disabled = true;
+                setRequired(false);
+                resetSelect('Automatisch: recruiter/admin (planner)');
+                hint.textContent = 'Voor fase 1 wordt de interviewer automatisch de recruiter/admin die het gesprek inplant.';
+                setSubmitEnabled(true);
+                return;
+            }
+
+            const list = getListForPhase(selected);
+
+            if (!Array.isArray(list) || list.length === 0) {
+                interviewerSelect.disabled = true;
+                setRequired(false);
+                resetSelect('Geen interviewers toegewezen');
+                hint.textContent = '⚠️ De Hiring Manager moet eerst interviewers toewijzen aan deze fase. Je kan nog niet inplannen.';
+                setSubmitEnabled(false);
+                return;
+            }
+
+            interviewerSelect.disabled = false;
+            setRequired(true);
+
+            interviewerSelect.innerHTML = '';
+            list.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.label;
+                interviewerSelect.appendChild(opt);
+            });
+
+            hint.textContent = 'Selecteer 1 of meerdere interviewers (Ctrl/Cmd voor meerdere).';
+            setSubmitEnabled(true);
+        }
+
+        phaseSelect.addEventListener('change', onPhaseChange);
+        onPhaseChange();
+    })();
+</script>
+
+{% endblock %}

@@ -1,0 +1,63 @@
+# Project Name: Werving App
+
+## Overview
+Werving App is a project designed to facilitate [brief description of the project purpose].
+
+## Getting Started
+
+### Prerequisites
+- Python 3.x
+- pip
+
+### Setup Instructions
+
+1. **Create a Virtual Environment**
+  To start, activate the virtual environment:
+  ```bash
+  venv\Scripts\activate
+  ```
+
+2. **Install Requirements**
+  Download the necessary packages:
+  ```bash
+  pip install -r requirements.txt
+  ```
+
+3. **Initialize the Database**
+  Start the database with:
+  ```bash
+  python init_db.py
+  ```
+
+4. **Run the Application**
+  Launch the application using:
+  ```bash
+  python app.py
+  ```
+
+5. **Seed the Database**
+  To populate the database with demo data, run:
+  ```bash
+  python seed_demo_data.py --reset
+  ```
+  Note: The `--reset` option will clear the existing database before seeding.
+
+### Environment Variables
+You need to set the following environment variables for SMTP configuration:
+# SMTP Microsoft 365 / Outlook
+SMTP_HOST=smtp.office365.com
+SMTP_PORT=587
+SMTP_USE_TLS=1
+
+SMTP_USERNAME=your_email@example.com          # your full email address
+SMTP_PASSWORD=your_app_password               # preferably "App password", not your normal password
+
+SMTP_FROM_EMAIL=your_email@example.com
+SMTP_FROM_NAME=Werving App
+
+# (optional but recommended)
+FLASK_SECRET_KEY=your_long_random_string
+MAX_UPLOAD_BYTES=10485760
+FLASK_SESSION_SECURE=0
+SQLITE_TIMEOUT_SECONDS=15
+

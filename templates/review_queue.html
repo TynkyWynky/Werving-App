@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-container">
+
+  {% set current_status = request.args.get('status', 'pending_review') %}
+
+  <div class="dashboard-welcome-banner">
+    <div>
+      <h2 class="welcome-title">Vacaturebeoordelingen</h2>
+      <p class="welcome-subtitle">Controleer openstaande vacatures, beheer gepubliceerde vacatures en sluit vacatures wanneer nodig.</p>
+    </div>
+  </div>
+
+  <!-- Tabs (Recruiter UX) -->
+  <div class="tab-bar">
+    <div class="tab-main">
+      <a href="{{ url_for('recruiter_review_queue_page', status='pending_review') }}"
+         class="tab-link {% if current_status == 'pending_review' %}active{% endif %}">
+        Pending review
+      </a>
+
+      <a href="{{ url_for('recruiter_review_queue_page', status='published') }}"
+         class="tab-link {% if current_status == 'published' %}active{% endif %}">
+        Published
+      </a>
+    </div>
+
+    <div class="tab-secondary">
+      <a href="{{ url_for('recruiter_review_queue_page', status='changes_requested') }}"
+         class="tab-link small {% if current_status == 'changes_requested' %}active{% endif %}">
+        Changes requested
+      </a>
+
+      <a href="{{ url_for('recruiter_review_queue_page', status='closed') }}"
+         class="tab-link small {% if current_status == 'closed' %}active{% endif %}">
+        Closed
+      </a>
+
+      <a href="{{ url_for('recruiter_review_queue_page', status='all') }}"
+         class="tab-link small {% if current_status == 'all' %}active{% endif %}">
+        All
+      </a>
+    </div>
+  </div>
+
+  <div class="table-container shadow">
+    <table class="candidate-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Department</th>
+          <th>Hiring manager</th>
+          <th>Status</th>
+          <th>Acties</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% set ns = namespace(has_rows=false) %}
+
+        {% for job in jobs %}
+          {% if current_status == 'all' or job.status == current_status %}
+            {% set ns.has_rows = true %}
+            <tr>
+              <td class="font-bold">{{ job.title }}</td>
+              <td>{{ job.department }}</td>
+              <td>{{ job.manager_email }}</td>
+
+              <td>
+                <span class="status-pill status-{{ job.status }}">
+                  {{ status_labels.get(job.status, job.status) }}
+                </span>
+              </td>
+
+              <td>
+                <div class="row-actions">
+
+                  <!-- View (always) -->
+                  <a href="{{ url_for('job_posting_detail_page', job_id=job.id, back_status=current_status) }}"
+                     class="cancel-button">
+                    View
+                  </a>
+
+                  {% if job.status == 'pending_review' %}
+                    <form method="POST" action="{{ url_for('publish_job_posting_action', job_id=job.id) }}">
+                      <button type="submit" class="download-button">Publiceren</button>
+                    </form>
+
+                    <form method="POST"
+                          action="{{ url_for('request_changes_job_posting_action', job_id=job.id) }}"
+                          class="inline-form">
+                      <input
+                        class="input-field inline-input"
+                        type="text"
+                        name="review_comment"
+                        placeholder="Feedback (required)..."
+                        required
+                      >
+                      <button type="submit" class="cancel-button">Vraag wijzigingen aan</button>
+                    </form>
+
+                  {% elif job.status == 'published' %}
+                    <form method="POST" action="{{ url_for('close_job_posting_action', job_id=job.id) }}">
+                      <button type="submit" class="cancel-button">Sluiten</button>
+                    </form>
+
+                  {% else %}
+                    <span class="status-label-small">Geen acties</span>
+                  {% endif %}
+
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        {% endfor %}
+
+        {% if not ns.has_rows %}
+          <tr>
+            <td colspan="5" class="empty-state">Geen vacatures.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="page-actions">
+    <a href="{{ url_for('dashboard_page') }}" class="cancel-button">Terug</a>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="hero-section">
+    <div class="hero-inner">
+        <h1 class="hero-title">Word onderdeel van ons team</h1>
+        <p class="hero-subtitle">Bekijk onze openstaande vacatures en vind jouw droombaan.</p>
+    </div>
+</div>
+
+<div class="page-container">
+    <div class="vacancy-list-container">
+
+        {# Backwards/forwards compatible: vacancies (new) OR all_vacancies (old) #}
+        {% set vacancy_list = vacancies if vacancies is defined and vacancies else (all_vacancies if all_vacancies is defined else []) %}
+
+        {% for job in vacancy_list %}
+        <div class="vacancy-card">
+            <div class="vacancy-info">
+
+                <div class="vacancy-topline">
+                    <span class="department-tag">{{ job.department }}</span>
+
+                    {% if job.experience_level %}
+                        <span class="meta-tag">{{ job.experience_level }}</span>
+                    {% endif %}
+
+                    {% if job.employment_type %}
+                        <span class="meta-tag">{{ job.employment_type }}</span>
+                    {% endif %}
+                </div>
+
+                <h3 class="job-title">{{ job.title }}</h3>
+
+                {% if job.location %}
+                    <p class="job-meta text-muted small">Locatie: {{ job.location }}</p>
+                {% endif %}
+
+                <p class="job-description">
+                    {{ (job.description or '')[:220] }}{% if job.description and job.description|length > 220 %}...{% endif %}
+                </p>
+            </div>
+
+            <div class="vacancy-actions">
+                <a href="{{ url_for('apply_page', vacancy_id=job.id) }}" class="apply-button">
+                    Bekijk & Solliciteer
+                </a>
+            </div>
+        </div>
+
+        {% else %}
+        <div class="no-vacancies-message">
+            <h3>Geen vacatures gevonden</h3>
+            <p>Er staan momenteel geen vacatures open. Kom later nog eens terug!</p>
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+    <div class="form-content-wrapper">
+
+        <div class="card shadow form-card">
+            <div class="card-header form-header">
+                <h4 class="header-title">Eindrapportage</h4>
+
+                <p class="text-muted mb-0">
+                    Kandidaat:
+                    <strong>
+                        {% if application and application.candidate_name %}{{ application.candidate_name }}
+                        {% elif app and app.name %}{{ app.name }}
+                        {% else %}Onbekend{% endif %}
+                    </strong>
+
+                    {% if application and application.candidate_email %}
+                        <span class="subtle-separator">•</span>
+                        <a class="email-link" href="mailto:{{ application.candidate_email }}">{{ application.candidate_email }}</a>
+                    {% endif %}
+                </p>
+
+                <p class="text-muted mb-0">
+                    Vacature:
+                    <strong>
+                        {% if application and application.vacancy_title %}{{ application.vacancy_title }}
+                        {% elif app and app.title %}{{ app.title }}
+                        {% else %}Onbekend{% endif %}
+                    </strong>
+                </p>
+
+                {% if application and application.cv_path %}
+                    <p class="text-muted mb-0">
+                        CV:
+                        <a class="download-button" href="{{ url_for('download_file', filename=application.cv_path) }}" target="_blank" rel="noopener">
+                            Open CV
+                        </a>
+                    </p>
+                {% endif %}
+            </div>
+
+            <div class="card-body form-body">
+
+                {# We support both: a single evaluation (evaluation) OR multiple (evaluations) #}
+                {% set evaluation_list = [] %}
+                {% if evaluations is defined and evaluations %}
+                    {% set evaluation_list = evaluations %}
+                {% elif evaluation is defined and evaluation %}
+                    {% set evaluation_list = [evaluation] %}
+                {% endif %}
+
+                {% if evaluation_list and evaluation_list|length > 0 %}
+
+                    <h5 class="mb-3">Resultaten interview</h5>
+
+                    {% for current_evaluation in evaluation_list %}
+                        <div class="evaluation-block">
+
+                            <p class="text-muted small">
+                                Interviewer:
+                                <strong>
+                                    {% if current_evaluation.interviewer_name is defined and current_evaluation.interviewer_name %}
+                                        {{ current_evaluation.interviewer_name }}
+                                    {% elif current_evaluation.interviewer_email is defined and current_evaluation.interviewer_email %}
+                                        {{ current_evaluation.interviewer_email }}
+                                    {% else %}
+                                        Onbekend
+                                    {% endif %}
+                                </strong>
+
+                                {% if current_evaluation.submitted_at is defined and current_evaluation.submitted_at %}
+                                    <span class="subtle-separator">•</span>
+                                    Ingediend: {{ current_evaluation.submitted_at | replace('T', ' ') }}
+                                {% endif %}
+
+                                {% if current_evaluation.evaluation_status is defined and current_evaluation.evaluation_status %}
+                                    <span class="subtle-separator">•</span>
+                                    Status: <strong>{{ current_evaluation.evaluation_status }}</strong>
+                                {% endif %}
+                            </p>
+
+                            {# Totalscore (X/Y + %) #}
+                            {% if totals_by_evaluation is defined and totals_by_evaluation and current_evaluation.id in totals_by_evaluation %}
+                                {% set t = totals_by_evaluation[current_evaluation.id] %}
+                                <p class="text-muted small mb-2">
+                                    <strong>Totaalscore:</strong> {{ t.total }}/{{ t.max }}
+                                    {% if t.percent is not none %}
+                                        <span class="subtle-separator">•</span>{{ t.percent }}%
+                                    {% endif %}
+                                </p>
+                            {% endif %}
+
+                            {# Recruiter/Admin: Reopen evaluation (only if submitted) #}
+                            {% if session.get('user_role') in ['recruiter', 'admin'] %}
+                                {% if current_evaluation.evaluation_status is not defined or current_evaluation.evaluation_status == 'submitted' %}
+                                    <form
+                                        method="POST"
+                                        action="{{ url_for('reopen_evaluation_action', evaluation_id=current_evaluation.id) }}"
+                                        class="inline-form-block"
+                                        onsubmit="return confirm('Evaluatie heropenen? De interviewer kan opnieuw aanpassen en opnieuw indienen.');"
+                                        style="margin: 10px 0 18px 0;"
+                                    >
+                                        <div class="form-row">
+                                            <div class="form-group grow">
+                                                <label class="form-label">Reden heropenen (verplicht)</label>
+                                                <input
+                                                    class="input-field"
+                                                    type="text"
+                                                    name="reopen_reason"
+                                                    placeholder="bv. Onvoldoende toelichting, graag extra feedback op criterium X"
+                                                    required
+                                                >
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class="form-label">&nbsp;</label>
+                                                <button type="submit" class="cancel-button">Heropen evaluatie</button>
+                                            </div>
+                                        </div>
+
+                                        <p class="text-muted small mb-0">
+                                            Opmerking: na heropenen is deze evaluatie geen “submitted” meer tot de interviewer opnieuw indient.
+                                        </p>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+
+                            {# Scores source:
+                               - preferred: scores_by_evaluation[current_evaluation.id]
+                               - fallback: scores
+                            #}
+                            {% set score_items = [] %}
+                            {% if scores_by_evaluation is defined and scores_by_evaluation and current_evaluation.id in scores_by_evaluation %}
+                                {% set score_items = scores_by_evaluation[current_evaluation.id] %}
+                            {% elif scores is defined and scores %}
+                                {% set score_items = scores %}
+                            {% endif %}
+
+                            {% if score_items and score_items|length > 0 %}
+                                <div class="score-summary">
+                                    {% for score_item in score_items %}
+                                        {% set aspect_title =
+                                            score_item.aspect_title
+                                            if score_item.aspect_title is defined
+                                            else (score_item.aspect_name if score_item.aspect_name is defined else 'Aspect')
+                                        %}
+                                        {% set numeric_score = score_item.score if score_item.score is defined else 0 %}
+                                        {% set max_score = score_item.max_score if score_item.max_score is defined else 5 %}
+
+                                        <div class="score-item">
+                                            <span class="score-label">{{ aspect_title }}</span>
+
+                                            <span class="score-value">
+                                                {% for i in range(numeric_score) %}⭐{% endfor %}
+                                                ({{ numeric_score }}/{{ max_score }})
+                                            </span>
+                                        </div>
+
+                                        {% if score_item.comment is defined and score_item.comment %}
+                                            <p class="text-muted small score-comment">{{ score_item.comment }}</p>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted small">Geen scores beschikbaar voor deze evaluatie.</p>
+                            {% endif %}
+
+                            <hr class="my-4">
+
+                            <h5 class="mb-3">Conclusie interviewer</h5>
+                            <div class="note-box">
+                                <p class="quote-text">
+                                    “
+                                    {% if current_evaluation.overall_comment is defined and current_evaluation.overall_comment %}
+                                        {{ current_evaluation.overall_comment }}
+                                    {% elif current_evaluation.final_comment is defined and current_evaluation.final_comment %}
+                                        {{ current_evaluation.final_comment }}
+                                    {% else %}
+                                        Geen conclusie ingevuld.
+                                    {% endif %}
+                                    ”
+                                </p>
+                            </div>
+
+                            {% if not loop.last %}
+                                <hr class="my-4">
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3 text-center">Wat wilt u doen met deze kandidaat?</h5>
+
+                    {% set current_status =
+                        application.app_status if application and application.app_status is defined
+                        else (application.status if application and application.status is defined else None)
+                    %}
+
+                    {% set decision_disabled = current_status in ['withdrawn', 'rejected', 'hired'] %}
+
+                    {% if can_make_decision %}
+                        <form method="POST" class="decision-buttons-container">
+                            <button
+                                type="submit"
+                                name="decision_status"
+                                value="rejected"
+                                class="decision-btn btn-reject"
+                                {% if decision_disabled %}disabled{% endif %}
+                            >
+                                ❌ Afwijzen
+                            </button>
+
+                            <button
+                                type="submit"
+                                name="decision_status"
+                                value="hired"
+                                class="decision-btn btn-hire"
+                                {% if decision_disabled %}disabled{% endif %}
+                            >
+                                ✅ Aannemen
+                            </button>
+                        </form>
+
+                        {% if decision_disabled %}
+                            <p class="text-muted small text-center">
+                                Deze beslissing is niet beschikbaar omdat de status al definitief is ({{ current_status }}).
+                            </p>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info" style="margin-top: 12px;">
+                            Alleen de <strong>Hiring Manager</strong> kan de eindbeslissing nemen. Recruiter/Admin kan dit rapport raadplegen.
+                        </div>
+                    {% endif %}
+
+                    <div class="page-actions">
+                        <a href="{{ url_for('recruiter_applications_page') }}" class="cancel-button">Terug</a>
+                    </div>
+
+                {% else %}
+                    <div class="alert alert-warning">
+                        Er is nog geen beoordeling ingevuld voor deze kandidaat.
+                    </div>
+                    <a href="{{ url_for('recruiter_applications_page') }}" class="cancel-button">Terug</a>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

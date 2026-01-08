@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-container">
+
+  <div class="dashboard-welcome-banner">
+    <div>
+      <h2 class="welcome-title">Interviewfase bewerken</h2>
+      <p class="welcome-subtitle">
+        Vacature: <strong>{{ job.title }}</strong> · Manager: <strong>{{ job.manager_email }}</strong>
+      </p>
+    </div>
+
+    <div>
+      <span class="status-pill status-{{ job.status }}">
+        {{ status_labels.get(job.status, job.status) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="table-container shadow">
+    <div class="section-header">
+      <h3 class="section-title">Fase</h3>
+      <p class="section-subtitle">Wijzig naam, volgorde, template en of de fase actief is.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('recruiter_update_phase_action', phase_id=phase.id) }}" class="inline-form-block">
+
+      <div class="form-row">
+        <div class="form-group grow">
+          <label class="form-label">Fase-naam</label>
+          <input class="input-field" type="text" name="phase_name" value="{{ phase.phase_name }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Volgnummer</label>
+          <input class="input-field" type="number" name="sequence_number" min="1" value="{{ phase.sequence_number }}" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group grow">
+          <label class="form-label">Template (published)</label>
+          <select class="input-field" name="template_version_id" required>
+            {% for tv in published_templates %}
+              <option value="{{ tv.id }}" {% if tv.id == phase.template_version_id %}selected{% endif %}>
+                {{ tv.template_name }} · v{{ tv.version_number }}{% if tv.version_label %} · {{ tv.version_label }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+
+          {% if current_template %}
+            <p class="text-muted small mb-0">
+              Huidig: {{ current_template.template_name }} · v{{ current_template.version_number }}
+              {% if current_template.version_label %} · {{ current_template.version_label }}{% endif %}
+              · {{ current_template.status }}
+            </p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Actief</label>
+          <select class="input-field" name="is_active">
+            <option value="1" {% if phase.is_active %}selected{% endif %}>Ja</option>
+            <option value="0" {% if not phase.is_active %}selected{% endif %}>Nee</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="page-actions">
+        <button type="submit" class="download-button">Opslaan</button>
+        <a href="{{ url_for('recruiter_manage_phases_page', job_id=job.id) }}" class="cancel-button">Annuleren</a>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+{% endblock %}

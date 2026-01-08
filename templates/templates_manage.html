@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-container">
+
+    <div class="dashboard-welcome-banner">
+        <div>
+            <h2 class="welcome-title">Templates & criteria</h2>
+            <p class="welcome-subtitle">
+                Beheer evaluatietemplates (versies + criteria). Publiceer een versie om die te gebruiken in
+                interviewfases.
+            </p>
+        </div>
+    </div>
+
+    <div class="table-container shadow">
+        <div class="section-header">
+            <h3 class="section-title">Templategroepen</h3>
+            <p class="section-subtitle">Elke groep kan meerdere versies hebben (draft/published/archived).</p>
+        </div>
+
+        <!-- Create template group -->
+        <form method="POST" action="{{ url_for('create_template_group_action') }}" class="inline-form-block">
+            <div class="form-row">
+                <div class="form-group grow">
+                    <label for="templateGroupName" class="form-label">Nieuwe templategroep</label>
+                    <input id="templateGroupName" class="input-field" type="text" name="group_name"
+                        placeholder="bv. Algemene interviewscorekaart" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="download-button">Aanmaken</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="divider"></div>
+
+        <!-- Groups list -->
+        <table class="candidate-table">
+            <thead>
+                <tr>
+                    <th>Groep</th>
+                    <th>Actieve (published) versie</th>
+                    <th>Laatste update</th>
+                    <th>Acties</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for group in template_groups %}
+                <tr>
+                    <td class="font-bold">{{ group.group_name }}</td>
+
+                    <td>
+                        {% if group.published_version_number %}
+                        <span class="status-pill status-published">v{{ group.published_version_number }}</span>
+                        {% else %}
+                        <span class="status-label-small">Nog geen published versie</span>
+                        {% endif %}
+                    </td>
+
+                    <td>{{ (group.updated_at or group.created_at or '')[:19] }}</td>
+
+                    <td>
+                        <div class="action-group">
+                            <a href="{{ url_for('template_group_detail_page', group_id=group.id) }}"
+                                class="plan-button">
+                                Beheer
+                            </a>
+
+                            <form method="POST"
+                                action="{{ url_for('create_template_version_action', group_id=group.id) }}">
+                                <button type="submit" class="download-button">Nieuwe versie</button>
+                            </form>
+
+                            <form method="POST"
+                                action="{{ url_for('delete_template_group_action', group_id=group.id) }}"
+                                onsubmit="return confirm('Weet je zeker dat je deze templategroep wil verwijderen? Dit kan enkel als er geen versies aan hangen.');">
+                                <button type="submit" class="cancel-button">Verwijderen</button>
+                            </form>
+                        </div>
+                    </td>
+
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="empty-state">Nog geen templategroepen. Maak er hierboven één aan.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="page-actions">
+        <a href="{{ url_for('dashboard_page') }}" class="cancel-button">Terug</a>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="login-page-background">
+
+    <div class="login-content-wrapper">
+
+        <div class="login-card">
+            <div class="login-header">
+                <h1 class="header-title">Login.</h1>
+                <p class="login-subtitle">
+                    Log in om toegang te krijgen tot het portaal.
+                </p>
+            </div>
+
+            <div class="login-body">
+                <form method="POST">
+
+                    <div class="login-form-group">
+                        <label for="emailField" class="form-label">E-mailadres</label>
+                        <input
+                            type="email"
+                            class="login-input-field"
+                            name="form_email"
+                            id="emailField"
+                            placeholder="naam@bedrijf.be"
+                            required
+                        >
+                    </div>
+
+                    <div class="login-form-group">
+                        <label for="passwordField" class="form-label">Wachtwoord</label>
+                        <input
+                            type="password"
+                            class="login-input-field"
+                            name="form_password"
+                            id="passwordField"
+                            placeholder="••••••••••••••"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" class="login-submit-button">
+                        Inloggen
+                    </button>
+                </form>
+
+                <div class="login-help-text">
+                    <p class="demo-title"><strong>Demo accounts (wachtwoord: Password123!)</strong></p>
+
+                    <ul class="demo-account-list">
+                        <li>👤 <strong>Manager:</strong> manager@bedrijf.be</li>
+                        <li>🤝 <strong>Recruiter:</strong> recruiter@bedrijf.be</li>
+                        <li>📅 <strong>Interviewer:</strong> interviewer@bedrijf.be</li>
+                        <li>🛠️ <strong>Admin:</strong> admin@bedrijf.be</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
