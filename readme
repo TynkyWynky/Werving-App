@@ -1,291 +1,82 @@
-<!-- README.html — Werving App -->
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Werving App — README</title>
-  <style>
-    :root{
-      --bg:#0b1220;
-      --card:#0f1b33;
-      --text:#e8eefc;
-      --muted:#b9c7ea;
-      --line:rgba(255,255,255,.10);
-      --code:#071026;
-      --accent:#7aa2ff;
-      --accent2:#66f2c2;
-      --warn:#ffcc66;
-      --radius:18px;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
-      color:var(--text);
-      background:
-        radial-gradient(1200px 700px at 20% -10%, rgba(122,162,255,.25), transparent 60%),
-        radial-gradient(900px 600px at 90% 0%, rgba(102,242,194,.18), transparent 55%),
-        radial-gradient(900px 700px at 50% 120%, rgba(255,204,102,.12), transparent 60%),
-        linear-gradient(180deg, var(--bg), #050812 85%);
-      min-height:100vh;
-    }
-    a{color:var(--accent);text-decoration:none}
-    a:hover{text-decoration:underline}
-    .wrap{max-width:980px;margin:0 auto;padding:38px 18px 70px}
-    header{
-      padding:22px 24px;
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
-      position:relative;
-      overflow:hidden;
-    }
-    header:before{
-      content:"";
-      position:absolute; inset:-2px;
-      background:
-        radial-gradient(600px 160px at 20% 0%, rgba(122,162,255,.25), transparent 60%),
-        radial-gradient(600px 180px at 85% 10%, rgba(102,242,194,.18), transparent 60%);
-      pointer-events:none;
-      filter:blur(0px);
-    }
-    .title{
-      position:relative;
-      display:flex; gap:14px; align-items:center; flex-wrap:wrap;
-    }
-    .badge{
-      font-size:12px;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      padding:6px 10px;
-      border:1px solid var(--line);
-      border-radius:999px;
-      color:var(--muted);
-      background:rgba(0,0,0,.18);
-      position:relative;
-    }
-    h1{
-      margin:0;
-      font-size:34px;
-      line-height:1.2;
-      position:relative;
-    }
-    .subtitle{
-      margin:10px 0 0;
-      color:var(--muted);
-      max-width:75ch;
-      position:relative;
-    }
+<div align="center">
 
-    main{margin-top:18px;display:grid;grid-template-columns: 1fr;gap:14px}
-    @media (min-width: 860px){
-      main{grid-template-columns: 1.2fr .8fr}
-    }
+<!-- Optional: Add your logo file at: /assets/logo.png -->
+<!-- <img src="assets/logo.png" alt="Werving App Logo" width="120" /> -->
 
-    .card{
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      background:rgba(255,255,255,.035);
-      box-shadow:0 10px 26px rgba(0,0,0,.22);
-      overflow:hidden;
-    }
-    .card .hd{
-      padding:14px 18px;
-      border-bottom:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-    }
-    .card .hd h2{
-      margin:0;
-      font-size:16px;
-      letter-spacing:.02em;
-    }
-    .card .bd{padding:16px 18px}
-    .muted{color:var(--muted)}
-    .list{margin:10px 0 0;padding-left:18px}
-    .list li{margin:6px 0}
-    .steps{counter-reset:step;margin:0;padding:0;list-style:none}
-    .steps li{
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:12px 12px 12px 44px;
-      position:relative;
-      background:rgba(0,0,0,.10);
-      margin:10px 0;
-    }
-    .steps li:before{
-      counter-increment:step;
-      content:counter(step);
-      position:absolute; left:12px; top:12px;
-      width:24px;height:24px;display:grid;place-items:center;
-      border-radius:9px;
-      font-weight:700;
-      color:var(--bg);
-      background:linear-gradient(135deg, var(--accent), var(--accent2));
-    }
-    pre{
-      margin:10px 0 0;
-      padding:12px 12px;
-      border-radius:14px;
-      background:var(--code);
-      border:1px solid rgba(122,162,255,.18);
-      overflow:auto;
-    }
-    code{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:13px}
-    .callout{
-      border:1px solid rgba(255,204,102,.25);
-      background:rgba(255,204,102,.08);
-      border-radius:14px;
-      padding:12px 12px;
-      margin:12px 0 0;
-      color:var(--text);
-    }
-    .callout strong{color:var(--warn)}
-    .kv{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:10px;
-      margin-top:8px;
-    }
-    .kv .item{
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:12px;
-      background:rgba(0,0,0,.10);
-    }
-    .kv .k{
-      font-size:12px;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      color:var(--muted);
-      margin-bottom:6px;
-    }
-    .env{
-      white-space:pre;
-      overflow:auto;
-      margin:0;
-      background:var(--code);
-      border:1px solid rgba(102,242,194,.16);
-      border-radius:14px;
-      padding:12px;
-    }
-    footer{
-      margin-top:18px;
-      color:var(--muted);
-      text-align:center;
-      font-size:13px;
-    }
-  </style>
-</head>
+# Werving App
 
-<body>
-  <div class="wrap">
-    <header>
-      <div class="title">
-        <span class="badge">README</span>
-        <h1>Werving App</h1>
-      </div>
-      <p class="subtitle">
-        Werving App is a project designed to facilitate <em>[brief description of the project purpose]</em>.
-        Use this guide to set up the project locally, initialize the database, and run the app.
-      </p>
-    </header>
+**A recruitment & selection platform to manage vacancies, candidates, interviews and structured evaluations.**
 
-    <main>
-      <!-- Left column -->
-      <section class="card">
-        <div class="hd">
-          <h2>Getting Started</h2>
-          <span class="muted">Local setup</span>
-        </div>
-        <div class="bd">
-          <h3 style="margin:0 0 8px;font-size:14px;">Prerequisites</h3>
-          <ul class="list">
-            <li>Python 3.x</li>
-            <li>pip</li>
-          </ul>
+<br/>
 
-          <h3 style="margin:16px 0 8px;font-size:14px;">Setup Instructions</h3>
-          <ol class="steps">
-            <li>
-              <strong>Create &amp; Activate a Virtual Environment</strong>
-              <pre><code>venv\Scripts\activate</code></pre>
-            </li>
+<!-- Badges -->
+<a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white"></a>
+<a href="https://flask.palletsprojects.com/"><img alt="Flask" src="https://img.shields.io/badge/Flask-000000?logo=flask&logoColor=white"></a>
+<img alt="Database" src="https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white">
+<img alt="Platform" src="https://img.shields.io/badge/Platform-Web-brightgreen">
+<img alt="License" src="https://img.shields.io/badge/License-MIT-blue">
 
-            <li>
-              <strong>Install Requirements</strong>
-              <pre><code>pip install -r requirements.txt</code></pre>
-            </li>
+<br/>
+<br/>
 
-            <li>
-              <strong>Initialize the Database</strong>
-              <pre><code>python init_db.py</code></pre>
-            </li>
+<!-- Optional screenshot: put a file at /assets/preview.png -->
+<!-- <img src="assets/preview.png" alt="App Preview" width="900" /> -->
 
-            <li>
-              <strong>Run the Application</strong>
-              <pre><code>python app.py</code></pre>
-            </li>
+</div>
 
-            <li>
-              <strong>Seed the Database (demo data)</strong>
-              <pre><code>python seed_demo_data.py --reset</code></pre>
-              <div class="callout">
-                <strong>Note:</strong> The <code>--reset</code> option will clear the existing database before seeding.
-              </div>
-            </li>
-          </ol>
-        </div>
-      </section>
+---
 
-      <!-- Right column -->
-      <aside class="card">
-        <div class="hd">
-          <h2>Environment Variables</h2>
-          <span class="muted">SMTP + app config</span>
-        </div>
-        <div class="bd">
-          <p class="muted" style="margin:0 0 10px;">
-            Set the following variables (e.g., in a <code>.env</code> file) for SMTP configuration and application settings.
-          </p>
+## ✨ Features
 
-          <div class="kv">
-            <div class="item">
-              <div class="k">Microsoft 365 / Outlook SMTP</div>
-              <pre class="env"><code># SMTP Microsoft 365 / Outlook
-SMTP_HOST=smtp.office365.com
-SMTP_PORT=587
-SMTP_USE_TLS=1
+- **Vacancy workflow**
+  - Create vacancy requests *(Hiring Manager)*
+  - Validate & publish vacancies *(Recruiter)*
+  - Close / archive vacancies
+- **Candidate portal**
+  - Apply to published vacancies
+  - Upload CV *(PDF/DOCX)* and motivation
+  - Track application status and optionally withdraw
+- **Screening & shortlist**
+  - Filter candidates by status
+  - Shortlist management for interview rounds
+- **Interview planning**
+  - Hiring Manager assigns interviewers
+  - Recruiter schedules interviews & sends invitations *(mail)*
+  - Optional online meeting link (Teams/Zoom/...)
+- **Structured evaluations (UC-08)**
+  - **Recruiter evaluates interview round 1**
+  - **Interviewers evaluate round 2+**
+  - Fixed criteria templates + total overview for decision-making
 
-SMTP_USERNAME=your_email@example.com          # your full email address
-SMTP_PASSWORD=your_app_password               # preferably "App password", not your normal password
+---
 
-SMTP_FROM_EMAIL=your_email@example.com
-SMTP_FROM_NAME=Werving App</code></pre>
-            </div>
+## 👥 Roles
 
-            <div class="item">
-              <div class="k">Optional (recommended)</div>
-              <pre class="env"><code># (optional but recommended)
-FLASK_SECRET_KEY=your_long_random_string
-MAX_UPLOAD_BYTES=10485760
-FLASK_SESSION_SECURE=0
-SQLITE_TIMEOUT_SECONDS=15</code></pre>
-            </div>
-          </div>
+- **Hiring Manager** — requests vacancies, assigns interviewers, reviews results, makes final decision
+- **Recruiter (HR)** — validates/publishes vacancies, screens candidates, plans interviews, conducts **round 1**, manages templates
+- **Interviewer** — conducts technical/content interview(s) in **round 2+** and submits evaluation
+- **Candidate** — applies, uploads documents, tracks status
 
-          <div class="callout" style="margin-top:12px;">
-            <strong>Tip:</strong> Prefer an <em>App Password</em> for Microsoft 365 instead of your normal account password.
-          </div>
-        </div>
-      </aside>
-    </main>
+---
 
-    <footer>
-      <p style="margin:0;">Werving App — README (HTML)</p>
-    </footer>
-  </div>
-</body>
-</html>
+## 🧰 Tech Stack
+
+- **Python 3**
+- **Flask**
+- **SQLite**
+- SMTP email (Microsoft 365 / Outlook supported)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.x
+- pip
+
+### Setup (Windows)
+
+1) **Create & activate a virtual environment**
+```bash
+python -m venv venv
+venv\Scripts\activate
