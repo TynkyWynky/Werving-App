@@ -9,7 +9,8 @@
         <div>
             <h2 class="welcome-title">{{ job.title }}</h2>
             <p class="welcome-subtitle">
-                Afdeling: <strong>{{ job.department }}</strong> · Aanwervingsmanager: <strong>{{ job.manager_email }}</strong>
+                Afdeling: <strong>{{ job.department }}</strong> · Aanwervingsmanager: <strong>{{ job.manager_email
+                    }}</strong>
             </p>
         </div>
 
@@ -29,7 +30,7 @@
     {% endif %}
 
     {# Optioneel: toon een publicatiecheck waarschuwing indien meegegeven door backend.
-       Indien niet meegegeven, ondersteunen we nog steeds fases als je die later doorgeeft.
+    Indien niet meegegeven, ondersteunen we nog steeds fases als je die later doorgeeft.
     #}
     {% if role == 'recruiter' and job.status == 'pending_review' %}
     {% if publish_checks is defined and publish_checks %}
@@ -75,7 +76,8 @@
                     <h3 class="job-detail-title">Interviewfases</h3>
 
                     {% if role in ['recruiter', 'admin'] %}
-                    <a href="{{ url_for('recruiter_manage_phases_page', job_id=job.id) }}" class="plan-button">Fases beheren</a>
+                    <a href="{{ url_for('recruiter_manage_phases_page', job_id=job.id) }}" class="plan-button">Fases
+                        beheren</a>
                     {% endif %}
 
                     {% if role == 'manager' %}
@@ -114,7 +116,8 @@
                                     {% if p.template_group_name %}
                                     <div class="font-bold">{{ p.template_group_name }}</div>
                                     <div class="status-label-small">
-                                        v{{ p.template_version_number }}{% if p.template_version_label %} · {{ p.template_version_label }}{% endif %}
+                                        v{{ p.template_version_number }}{% if p.template_version_label %} · {{
+                                        p.template_version_label }}{% endif %}
                                     </div>
                                     {% else %}
                                     <span class="status-label-small">—</span>
@@ -129,7 +132,8 @@
                                 </td>
                                 <td>
                                     {% if p.template_status %}
-                                    <span class="status-pill status-{{ p.template_status }}">{{ p.template_status }}</span>
+                                    <span class="status-pill status-{{ p.template_status }}">{{ p.template_status
+                                        }}</span>
                                     {% else %}
                                     <span class="status-label-small">—</span>
                                     {% endif %}
@@ -148,7 +152,8 @@
 
                     {% if role in ['recruiter', 'admin'] %}
                     <div class="page-actions">
-                        <a href="{{ url_for('manage_job_phases_page', job_id=job.id) }}" class="download-button">Fase toevoegen</a>
+                        <a href="{{ url_for('recruiter_manage_phases_page', job_id=job.id) }}"
+                            class="download-button">Fase toevoegen</a>
                     </div>
                     {% endif %}
                     {% endif %}

@@ -543,12 +543,253 @@ def dashboard_page():
     if "user_id" not in session:
         return redirect(url_for("login_page"))
 
+    user_id = int(session["user_id"])
     user_role = session.get("user_role")
+
+    database_connection = get_database_connection()
+
+    def fetch_scalar(sql: str, params: tuple = ()) -> int:
+        row = database_connection.execute(sql, params).fetchone()
+        if not row:
+            return 0
+        val = list(row)[0]
+        return int(val or 0)
+
+    def fill_daily_series(rows, days: int, date_key: str = "d", count_key: str = "cnt"):
+        # rows: [{"d": "YYYY-MM-DD", "cnt": 3}, ...]
+        from datetime import datetime, timedelta
+
+        today = datetime.now().date()
+        start = today - timedelta(days=days - 1)
+        lookup = {r[date_key]: int(r[count_key]) for r in rows}
+
+        labels = []
+        data = []
+        for i in range(days):
+            d = start + timedelta(days=i)
+            d_str = d.isoformat()
+            labels.append(d.strftime("%d/%m"))
+            data.append(lookup.get(d_str, 0))
+        return labels, data
+
+    # -------------------------
+    # Default payloads (safe)
+    # -------------------------
+    kpi_cards = []
+    todos = []
+    top_vacancies = []
+    recent_activity = []
+
+    vacancy_status_counts = []
+    application_status_counts = []
+    apps_last14_labels = []
+    apps_last14_data = []
+
+    interview_status_counts = []
+    evaluation_status_counts = []
+    interviews_next14_labels = []
+    interviews_next14_data = []
+
     upcoming_interviews = []
 
-    # Voor interviewers: toon komende interviews op dashboard
+    # -------------------------
+    # INTERVIEWER dashboard
+    # -------------------------
     if user_role == ROLE_INTERVIEWER:
-        database_connection = get_database_connection()
+        # KPI: komende interviews (7d)
+        upcoming_7d = fetch_scalar(
+            """
+            SELECT COUNT(*)
+            FROM interviews i
+            JOIN interview_interviewers ii ON ii.interview_id = i.id
+            WHERE ii.interviewer_user_id = ?
+              AND i.status = 'planned'
+              AND i.scheduled_start >= datetime('now')
+              AND i.scheduled_start < datetime('now', '+7 days')
+            """,
+            (user_id,),
+        )
+
+        # KPI: evaluaties nog te doen (completed laatste 14d, geen eval of draft)
+        eval_todo = fetch_scalar(
+            """
+            SELECT COUNT(*)
+            FROM interviews i
+            JOIN interview_interviewers ii ON ii.interview_id = i.id
+            LEFT JOIN evaluations e
+              ON e.interview_id = i.id
+             AND e.interviewer_user_id = ii.interviewer_user_id
+            WHERE ii.interviewer_user_id = ?
+              AND i.status = 'completed'
+              AND COALESCE(i.completed_at, i.created_at) >= datetime('now', '-14 days')
+              AND (e.id IS NULL OR e.evaluation_status = 'draft')
+            """,
+            (user_id,),
+        )
+
+        # KPI: afgeronde interviews (30d)
+        completed_30d = fetch_scalar(
+            """
+            SELECT COUNT(*)
+            FROM interviews i
+            JOIN interview_interviewers ii ON ii.interview_id = i.id
+            WHERE ii.interviewer_user_id = ?
+              AND i.status = 'completed'
+              AND COALESCE(i.completed_at, i.created_at) >= datetime('now', '-30 days')
+            """,
+            (user_id,),
+        )
+
+        # KPI: ingediende evaluaties (30d)
+        submitted_30d = fetch_scalar(
+            """
+            SELECT COUNT(*)
+            FROM evaluations e
+            WHERE e.interviewer_user_id = ?
+              AND e.evaluation_status = 'submitted'
+              AND COALESCE(e.submitted_at, e.updated_at, e.created_at) >= datetime('now', '-30 days')
+            """,
+            (user_id,),
+        )
+
+        kpi_cards = [
+            {"label": "Komende interviews", "value": upcoming_7d, "sub": "volgende 7 dagen", "tone": "interviewer"},
+            {"label": "Evaluaties te doen", "value": eval_todo, "sub": "completed (14 dagen)", "tone": "warn"},
+            {"label": "Afgeronde interviews", "value": completed_30d, "sub": "laatste 30 dagen", "tone": "ok"},
+            {"label": "Evaluaties ingediend", "value": submitted_30d, "sub": "laatste 30 dagen", "tone": "neutral"},
+        ]
+
+        todos = [
+            {
+                "title": "Werk je evaluaties af",
+                "text": "Check interviews die afgerond zijn en dien je evaluatie in.",
+                "href": url_for("my_interviews_page"),
+            },
+            {
+                "title": "Check je agenda",
+                "text": "Bekijk geplande gesprekken en bereid je vragen voor.",
+                "href": url_for("my_interviews_page"),
+            },
+        ]
+
+        # Chart 1: interview status (laatste 30 dagen)
+        rows = database_connection.execute(
+            """
+            SELECT i.status AS status, COUNT(*) AS cnt
+            FROM interviews i
+            JOIN interview_interviewers ii ON ii.interview_id = i.id
+            WHERE ii.interviewer_user_id = ?
+              AND i.scheduled_start >= datetime('now', '-30 days')
+            GROUP BY i.status
+            """,
+            (user_id,),
+        ).fetchall()
+        interview_status_counts = [{"status": r["status"], "count": int(r["cnt"])} for r in rows]
+
+        # Chart 2: evaluation status (globaal voor interviewer)
+        rows = database_connection.execute(
+            """
+            SELECT e.evaluation_status AS status, COUNT(*) AS cnt
+            FROM evaluations e
+            WHERE e.interviewer_user_id = ?
+            GROUP BY e.evaluation_status
+            """,
+            (user_id,),
+        ).fetchall()
+        evaluation_status_counts = [{"status": r["status"], "count": int(r["cnt"])} for r in rows]
+
+        # Chart 3: interviews komende 14 dagen per dag
+        rows = database_connection.execute(
+            """
+            SELECT DATE(i.scheduled_start) AS d, COUNT(*) AS cnt
+            FROM interviews i
+            JOIN interview_interviewers ii ON ii.interview_id = i.id
+            WHERE ii.interviewer_user_id = ?
+              AND i.status = 'planned'
+              AND i.scheduled_start >= date('now')
+              AND i.scheduled_start < date('now', '+14 days')
+            GROUP BY DATE(i.scheduled_start)
+            ORDER BY DATE(i.scheduled_start) ASC
+            """,
+            (user_id,),
+        ).fetchall()
+        rlist = [{"d": r["d"], "cnt": int(r["cnt"])} for r in rows]
+        interviews_next14_labels, interviews_next14_data = fill_daily_series(rlist, days=14)
+
+        # Top vacatures (op basis van komende interviews voor deze interviewer)
+        rows = database_connection.execute(
+            """
+            SELECT
+                v.id,
+                v.title,
+                v.department,
+                v.status,
+                COUNT(i.id) AS upcoming_count
+            FROM vacancies v
+            JOIN applications a ON a.vacancy_id = v.id
+            JOIN interviews i ON i.application_id = a.id
+            JOIN interview_interviewers ii ON ii.interview_id = i.id
+            WHERE ii.interviewer_user_id = ?
+              AND i.status = 'planned'
+              AND i.scheduled_start >= datetime('now')
+            GROUP BY v.id
+            ORDER BY upcoming_count DESC, v.created_at DESC
+            LIMIT 5
+            """,
+            (user_id,),
+        ).fetchall()
+        top_vacancies = [
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "department": r["department"],
+                "status": r["status"],
+                "metric": int(r["upcoming_count"]),
+                "metric_label": "komende interviews",
+            }
+            for r in rows
+        ]
+
+        # Recente activiteit (voor deze interviewer: interviews + evaluaties)
+        rows = database_connection.execute(
+            """
+            SELECT
+                al.*,
+                u.email_address AS performed_by_user_email
+            FROM audit_log al
+            LEFT JOIN users u ON u.id = al.performed_by_user_id
+            WHERE
+                (al.entity_type = 'interview' AND al.entity_id IN (
+                    SELECT i.id
+                    FROM interviews i
+                    JOIN interview_interviewers ii ON ii.interview_id = i.id
+                    WHERE ii.interviewer_user_id = ?
+                ))
+                OR
+                (al.entity_type = 'evaluation' AND al.entity_id IN (
+                    SELECT e.id
+                    FROM evaluations e
+                    WHERE e.interviewer_user_id = ?
+                ))
+            ORDER BY al.created_at DESC, al.id DESC
+            LIMIT 10
+            """,
+            (user_id, user_id),
+        ).fetchall()
+        recent_activity = [
+            {
+                "created_at": r["created_at"],
+                "event_type": r["event_type"],
+                "entity_type": r["entity_type"],
+                "entity_id": r["entity_id"],
+                "from_status": r["from_status"],
+                "to_status": r["to_status"],
+                "by": r["performed_by_user_email"] or "—",
+            }
+            for r in rows
+        ]
+
+        # Bestaande “mijn agenda” table (zoals je al had)
         upcoming_interviews = database_connection.execute(
             """
             SELECT
@@ -578,18 +819,311 @@ def dashboard_page():
             ORDER BY i.scheduled_start ASC
             LIMIT 5
             """,
-            (session["user_id"], session["user_id"]),
+            (user_id, user_id),
         ).fetchall()
-        database_connection.close()
+
+    # -------------------------
+    # MANAGER / RECRUITER / ADMIN dashboard
+    # -------------------------
+    else:
+        is_manager = user_role == ROLE_MANAGER
+
+        # scope filters
+        vacancy_scope_where = ""
+        vacancy_scope_params = ()
+        app_scope_join = "JOIN vacancies v ON v.id = a.vacancy_id"
+        app_scope_where = ""
+        app_scope_params = ()
+        interview_scope_join = """
+            JOIN applications a ON a.id = i.application_id
+            JOIN vacancies v ON v.id = a.vacancy_id
+        """
+        interview_scope_where = ""
+        interview_scope_params = ()
+
+        if is_manager:
+            vacancy_scope_where = "WHERE manager_id = ?"
+            vacancy_scope_params = (user_id,)
+            app_scope_where = "WHERE v.manager_id = ?"
+            app_scope_params = (user_id,)
+            interview_scope_where = "WHERE v.manager_id = ?"
+            interview_scope_params = (user_id,)
+
+        # KPI: vacatures
+        open_vacancies = fetch_scalar(
+            f"""
+            SELECT COUNT(*)
+            FROM vacancies
+            {vacancy_scope_where}
+            {"AND" if vacancy_scope_where else "WHERE"} status != 'closed'
+            """,
+            vacancy_scope_params,
+        )
+        pending_review = fetch_scalar(
+            f"""
+            SELECT COUNT(*)
+            FROM vacancies
+            {vacancy_scope_where}
+            {"AND" if vacancy_scope_where else "WHERE"} status = 'pending_review'
+            """,
+            vacancy_scope_params,
+        )
+
+        # KPI: actieve kandidaten (pipeline)
+        active_candidates = fetch_scalar(
+            f"""
+            SELECT COUNT(*)
+            FROM applications a
+            {app_scope_join}
+            {app_scope_where}
+            {"AND" if app_scope_where else "WHERE"} a.status IN ('new','in_review','shortlisted','interview','offered')
+            """,
+            app_scope_params,
+        )
+
+        # KPI: interviews volgende 7 dagen
+        interviews_7d = fetch_scalar(
+            f"""
+            SELECT COUNT(*)
+            FROM interviews i
+            {interview_scope_join}
+            {interview_scope_where}
+            {"AND" if interview_scope_where else "WHERE"} i.status = 'planned'
+              AND i.scheduled_start >= datetime('now')
+              AND i.scheduled_start < datetime('now', '+7 days')
+            """,
+            interview_scope_params,
+        )
+
+        # Recruiter/Admin extra KPI: nieuwe sollicitaties (7d) & offers (als extra context)
+        new_apps_7d = fetch_scalar(
+            f"""
+            SELECT COUNT(*)
+            FROM applications a
+            {app_scope_join}
+            {app_scope_where}
+            {"AND" if app_scope_where else "WHERE"} a.applied_at >= datetime('now', '-7 days')
+            """,
+            app_scope_params,
+        )
+        offers_open = fetch_scalar(
+            f"""
+            SELECT COUNT(*)
+            FROM applications a
+            {app_scope_join}
+            {app_scope_where}
+            {"AND" if app_scope_where else "WHERE"} a.status = 'offered'
+            """,
+            app_scope_params,
+        )
+
+        if is_manager:
+            # manager: meer “mijn” KPIs
+            drafts = fetch_scalar(
+                """
+                SELECT COUNT(*)
+                FROM vacancies
+                WHERE manager_id = ?
+                  AND status = 'draft'
+                """,
+                (user_id,),
+            )
+            changes_req = fetch_scalar(
+                """
+                SELECT COUNT(*)
+                FROM vacancies
+                WHERE manager_id = ?
+                  AND status = 'changes_requested'
+                """,
+                (user_id,),
+            )
+
+            kpi_cards = [
+                {"label": "Mijn open vacatures", "value": open_vacancies, "sub": "niet gesloten", "tone": "manager"},
+                {"label": "In review", "value": pending_review, "sub": "wacht op recruiter", "tone": "warn"},
+                {"label": "Actieve kandidaten", "value": active_candidates, "sub": "pipeline actief", "tone": "ok"},
+                {"label": "Interviews", "value": interviews_7d, "sub": "volgende 7 dagen", "tone": "neutral"},
+            ]
+
+            todos = [
+                {"title": "Werk drafts af", "text": f"{drafts} draft(s) klaarzetten en indienen voor review.", "href": url_for("manager_job_postings_page")},
+                {"title": "Reageer op feedback", "text": f"{changes_req} vacature(s) met ‘wijzigingen gevraagd’.", "href": url_for("manager_job_postings_page")},
+                {"title": "Volg de pipeline op", "text": "Check shortlists/interviews en neem beslissingen.", "href": url_for("manager_job_postings_page")},
+            ]
+        else:
+            # recruiter/admin: review + instroom
+            kpi_cards = [
+                {"label": "Vacatures in review", "value": pending_review, "sub": "te behandelen", "tone": "recruiter"},
+                {"label": "Nieuwe sollicitaties", "value": new_apps_7d, "sub": "laatste 7 dagen", "tone": "ok"},
+                {"label": "Geplande interviews", "value": interviews_7d, "sub": "volgende 7 dagen", "tone": "neutral"},
+                {"label": "Openstaande offers", "value": offers_open, "sub": "wacht op antwoord", "tone": "warn"},
+            ]
+
+            todos = [
+                {"title": "Behandel review-queue", "text": f"{pending_review} vacature(s) wachten op review.", "href": url_for("recruiter_review_queue_page")},
+                {"title": "Hou instroom in de gaten", "text": f"{new_apps_7d} nieuwe sollicitatie(s) in 7 dagen.", "href": url_for("recruiter_review_queue_page")},
+                {"title": "Templates & criteria", "text": "Zorg dat interviewfases correct gelinkt zijn.", "href": url_for("templates_manage_page")},
+            ]
+
+        # Charts: vacatures per status
+        rows = database_connection.execute(
+            f"""
+            SELECT status, COUNT(*) AS cnt
+            FROM vacancies
+            {vacancy_scope_where}
+            GROUP BY status
+            """,
+            vacancy_scope_params,
+        ).fetchall()
+        vacancy_status_counts = [{"status": r["status"], "count": int(r["cnt"])} for r in rows]
+
+        # Charts: sollicitaties per status
+        rows = database_connection.execute(
+            f"""
+            SELECT a.status AS status, COUNT(*) AS cnt
+            FROM applications a
+            {app_scope_join}
+            {app_scope_where}
+            GROUP BY a.status
+            """,
+            app_scope_params,
+        ).fetchall()
+        application_status_counts = [{"status": r["status"], "count": int(r["cnt"])} for r in rows]
+
+        # Line chart: nieuwe sollicitaties (laatste 14 dagen)
+        rows = database_connection.execute(
+            f"""
+            SELECT DATE(a.applied_at) AS d, COUNT(*) AS cnt
+            FROM applications a
+            {app_scope_join}
+            {app_scope_where}
+            {"AND" if app_scope_where else "WHERE"} a.applied_at >= date('now', '-13 days')
+            GROUP BY DATE(a.applied_at)
+            ORDER BY DATE(a.applied_at) ASC
+            """,
+            app_scope_params,
+        ).fetchall()
+        rlist = [{"d": r["d"], "cnt": int(r["cnt"])} for r in rows]
+        apps_last14_labels, apps_last14_data = fill_daily_series(rlist, days=14)
+
+        # Top vacatures (meeste sollicitaties)
+        rows = database_connection.execute(
+            f"""
+            SELECT
+                v.id,
+                v.title,
+                v.department,
+                v.status,
+                COUNT(a.id) AS app_count
+            FROM vacancies v
+            LEFT JOIN applications a ON a.vacancy_id = v.id
+            {("WHERE v.manager_id = ?" if is_manager else "")}
+            GROUP BY v.id
+            ORDER BY app_count DESC, v.created_at DESC
+            LIMIT 5
+            """,
+            ((user_id,) if is_manager else ()),
+        ).fetchall()
+        top_vacancies = [
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "department": r["department"],
+                "status": r["status"],
+                "metric": int(r["app_count"]),
+                "metric_label": "sollicitaties",
+            }
+            for r in rows
+        ]
+
+        # Recente activiteit (manager scoped, anders globaal)
+        if is_manager:
+            rows = database_connection.execute(
+                """
+                SELECT
+                    al.*,
+                    u.email_address AS performed_by_user_email
+                FROM audit_log al
+                LEFT JOIN users u ON u.id = al.performed_by_user_id
+                WHERE
+                    (al.entity_type = 'vacancy' AND al.entity_id IN (
+                        SELECT id FROM vacancies WHERE manager_id = ?
+                    ))
+                    OR
+                    (al.entity_type = 'application' AND al.entity_id IN (
+                        SELECT a.id
+                        FROM applications a
+                        JOIN vacancies v ON v.id = a.vacancy_id
+                        WHERE v.manager_id = ?
+                    ))
+                    OR
+                    (al.entity_type = 'interview' AND al.entity_id IN (
+                        SELECT i.id
+                        FROM interviews i
+                        JOIN applications a ON a.id = i.application_id
+                        JOIN vacancies v ON v.id = a.vacancy_id
+                        WHERE v.manager_id = ?
+                    ))
+                    OR
+                    (al.entity_type = 'evaluation' AND al.entity_id IN (
+                        SELECT e.id
+                        FROM evaluations e
+                        JOIN interviews i ON i.id = e.interview_id
+                        JOIN applications a ON a.id = i.application_id
+                        JOIN vacancies v ON v.id = a.vacancy_id
+                        WHERE v.manager_id = ?
+                    ))
+                ORDER BY al.created_at DESC, al.id DESC
+                LIMIT 10
+                """,
+                (user_id, user_id, user_id, user_id),
+            ).fetchall()
+        else:
+            rows = database_connection.execute(
+                """
+                SELECT
+                    al.*,
+                    u.email_address AS performed_by_user_email
+                FROM audit_log al
+                LEFT JOIN users u ON u.id = al.performed_by_user_id
+                ORDER BY al.created_at DESC, al.id DESC
+                LIMIT 10
+                """
+            ).fetchall()
+
+        recent_activity = [
+            {
+                "created_at": r["created_at"],
+                "event_type": r["event_type"],
+                "entity_type": r["entity_type"],
+                "entity_id": r["entity_id"],
+                "from_status": r["from_status"],
+                "to_status": r["to_status"],
+                "by": r["performed_by_user_email"] or "—",
+            }
+            for r in rows
+        ]
+
+    database_connection.close()
 
     return render_template(
         "dashboard.html",
         user_email=session.get("user_email"),
         user_role=user_role,
+        kpi_cards=kpi_cards,
+        todos=todos,
+        top_vacancies=top_vacancies,
+        recent_activity=recent_activity,
+        vacancy_status_counts=vacancy_status_counts,
+        application_status_counts=application_status_counts,
+        apps_last14_labels=apps_last14_labels,
+        apps_last14_data=apps_last14_data,
+        interview_status_counts=interview_status_counts,
+        evaluation_status_counts=evaluation_status_counts,
+        interviews_next14_labels=interviews_next14_labels,
+        interviews_next14_data=interviews_next14_data,
         upcoming_interviews=upcoming_interviews,
     )
-
-
 
 @app.route("/logout")
 def logout_action():

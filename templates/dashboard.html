@@ -1,32 +1,126 @@
 {% extends 'base.html' %}
 
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="page-container">
 
     <div class="dashboard-welcome-banner">
-        <h2 class="welcome-title">Welkom op het dashboard</h2>
-        <p class="welcome-subtitle">
-            Uw rol:
-            <span class="role-badge role-{{ user_role }}">
-                {% if user_role == 'manager' %}Manager
-                {% elif user_role == 'recruiter' %}Recruiter
-                {% elif user_role == 'interviewer' %}Interviewer
-                {% elif user_role == 'admin' %}Admin
-                {% else %}{{ user_role }}
-                {% endif %}
-            </span>
-        </p>
+        <div>
+            <h2 class="welcome-title">Dashboard</h2>
+            <p class="welcome-subtitle">
+                Ingelogd als <strong>{{ user_email }}</strong> ·
+                Rol:
+                <span class="role-badge role-{{ user_role }}">
+                    {% if user_role == 'manager' %}Manager
+                    {% elif user_role == 'recruiter' %}Recruiter
+                    {% elif user_role == 'interviewer' %}Interviewer
+                    {% elif user_role == 'admin' %}Admin
+                    {% else %}{{ user_role }}
+                    {% endif %}
+                </span>
+            </p>
+        </div>
+
+        <div class="dashboard-quick-actions">
+            {% if user_role == 'manager' %}
+            <a class="action-button manager-btn" href="{{ url_for('create_vacancy_page') }}">Nieuwe vacature</a>
+            <a class="action-button manager-btn" href="{{ url_for('manager_job_postings_page') }}">Mijn vacatures</a>
+            {% elif user_role == 'recruiter' or user_role == 'admin' %}
+            <a class="action-button recruiter-btn" href="{{ url_for('recruiter_review_queue_page') }}">Review queue</a>
+            <a class="action-button recruiter-btn" href="{{ url_for('templates_manage_page') }}">Templates</a>
+            {% elif user_role == 'interviewer' %}
+            <a class="action-button interviewer-btn" href="{{ url_for('my_interviews_page') }}">Mijn agenda</a>
+            {% endif %}
+        </div>
     </div>
 
+    <!-- KPI cards -->
+    <div class="kpi-grid">
+        {% for kpi in kpi_cards %}
+        <div class="kpi-card kpi-{{ kpi.tone }}">
+            <div class="kpi-label">{{ kpi.label }}</div>
+            <div class="kpi-value">{{ kpi.value }}</div>
+            <div class="kpi-sub">{{ kpi.sub }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Charts -->
+    {% if user_role != 'interviewer' %}
+    <div class="dash-grid-2">
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <h3 class="section-title">Vacatures per status</h3>
+                <p class="section-subtitle">Snelle verdeling van je workflow.</p>
+            </div>
+            <div class="dash-card-body">
+                <canvas id="vacancyStatusChart" height="110"></canvas>
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <h3 class="section-title">Sollicitaties per status</h3>
+                <p class="section-subtitle">Pipeline overzicht.</p>
+            </div>
+            <div class="dash-card-body">
+                <canvas id="appStatusChart" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="dash-card dash-card-wide">
+        <div class="dash-card-head">
+            <h3 class="section-title">Nieuwe sollicitaties</h3>
+            <p class="section-subtitle">Laatste 14 dagen.</p>
+        </div>
+        <div class="dash-card-body">
+            <canvas id="appsLast14Chart" height="90"></canvas>
+        </div>
+    </div>
+    {% else %}
+    <div class="dash-grid-2">
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <h3 class="section-title">Interviews (30 dagen)</h3>
+                <p class="section-subtitle">Planned / completed / cancelled.</p>
+            </div>
+            <div class="dash-card-body">
+                <canvas id="interviewStatusChart" height="110"></canvas>
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <h3 class="section-title">Evaluaties</h3>
+                <p class="section-subtitle">Draft vs submitted.</p>
+            </div>
+            <div class="dash-card-body">
+                <canvas id="evaluationStatusChart" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="dash-card dash-card-wide">
+        <div class="dash-card-head">
+            <h3 class="section-title">Komende interviews</h3>
+            <p class="section-subtitle">Volgende 14 dagen.</p>
+        </div>
+        <div class="dash-card-body">
+            <canvas id="interviewsNext14Chart" height="90"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Interviewer: agenda table -->
     {% if user_role == 'interviewer' %}
-    <div class="table-container shadow">
+    <div class="table-container shadow" style="margin-top:16px;">
         <div class="job-detail-header" style="padding: 18px 18px 0 18px;">
             <h3 class="job-detail-title">Mijn agenda</h3>
-            <p class="text-muted mb-0">Bekijk uw geplande sollicitatiegesprekken.</p>
-
-            <div style="margin-top:12px;">
-                <a href="{{ url_for('my_interviews_page') }}" class="action-button interviewer-btn">Naar agenda</a>
-            </div>
+            <p class="text-muted mb-0">Volgende 5 geplande gesprekken.</p>
         </div>
 
         <div class="job-detail-body">
@@ -44,23 +138,21 @@
                 <tbody>
                     {% for interview in upcoming_interviews %}
                     <tr>
-                        <td>{{ (interview.scheduled_start or '')[:16] }}</td>
-                        <td class="font-bold">{{ interview.candidate_name }}</td>
+                        <td>{{ interview.scheduled_start }}</td>
+                        <td><strong>{{ interview.candidate_name }}</strong></td>
                         <td><span class="vacancy-badge">{{ interview.vacancy_title }}</span></td>
-                        <td><span class="status-label-small">{{ interview.phase_name or '-' }}</span></td>
+                        <td>{{ interview.phase_name or "—" }}</td>
                         <td>
-                            {% if interview.evaluation_status == 'submitted' %}
-                              <span class="status-pill status-published">Ingediend</span>
-                            {% elif interview.evaluation_status == 'draft' %}
-                              <span class="status-pill status-draft">Concept</span>
+                            {% if interview.evaluation_status == "submitted" %}
+                            <span class="pill pill-ok">Ingediend</span>
+                            {% elif interview.evaluation_status == "draft" %}
+                            <span class="pill pill-warn">Draft</span>
                             {% else %}
-                              <span class="status-label-small">Nog niet gestart</span>
+                            <span class="pill pill-neutral">Nog niet gestart</span>
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{{ url_for('evaluate_page', interview_id=interview.id) }}" class="btn-result">
-                                Evalueren
-                            </a>
+                            <a class="action-button interviewer-btn" href="{{ url_for('my_interviews_page') }}">Open</a>
                         </td>
                     </tr>
                     {% else %}
@@ -72,55 +164,203 @@
             </table>
         </div>
     </div>
-    {% else %}
-
-    <div class="dashboard-action-grid">
-
-        {% if user_role == 'manager' %}
-        <div class="action-card">
-            <div class="card-content">
-                <h5 class="action-title manager-color">Nieuwe vacature</h5>
-                <p class="action-description">Maak een nieuwe vacature aan voor uw afdeling.</p>
-                <a href="{{ url_for('create_vacancy_page') }}" class="action-button manager-btn">Vacature aanmaken</a>
-            </div>
-        </div>
-
-        <div class="action-card">
-            <div class="card-content">
-                <h5 class="action-title manager-color">Mijn vacatures</h5>
-                <p class="action-description">Bekijk statussen en dien vacatures in voor review.</p>
-                <a href="{{ url_for('manager_job_postings_page') }}" class="action-button manager-btn">Bekijk vacatures</a>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if user_role in ['recruiter', 'admin'] %}
-        <div class="action-card">
-            <div class="card-content">
-                <h5 class="action-title recruiter-color">Sollicitaties</h5>
-                <p class="action-description">Bekijk binnengekomen sollicitaties en beheer statussen.</p>
-                <a href="{{ url_for('recruiter_applications_page') }}" class="action-button recruiter-btn">Naar sollicitaties</a>
-            </div>
-        </div>
-
-        <div class="action-card">
-            <div class="card-content">
-                <h5 class="action-title recruiter-color">Vacatures review</h5>
-                <p class="action-description">Valideer vacatures en publiceer ze of vraag wijzigingen.</p>
-                <a href="{{ url_for('recruiter_review_queue_page') }}" class="action-button recruiter-btn">Naar review</a>
-            </div>
-        </div>
-
-        <div class="action-card">
-            <div class="card-content">
-                <h5 class="action-title recruiter-color">Templates & criteria</h5>
-                <p class="action-description">Beheer evaluatiecriteria en templates (UC-01).</p>
-                <a href="{{ url_for('templates_manage_page') }}" class="action-button recruiter-btn">Beheer templates</a>
-            </div>
-        </div>
-        {% endif %}
-
-    </div>
     {% endif %}
+
+    <!-- Todo + Lists -->
+    <div class="dash-grid-2" style="margin-top:16px;">
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <h3 class="section-title">To-do</h3>
+                <p class="section-subtitle">Wat vraagt vandaag aandacht?</p>
+            </div>
+            <div class="dash-card-body">
+                <div class="todo-list">
+                    {% for t in todos %}
+                    <a class="todo-item" href="{{ t.href }}">
+                        <div class="todo-title">{{ t.title }}</div>
+                        <div class="todo-text">{{ t.text }}</div>
+                    </a>
+                    {% else %}
+                    <div class="empty-state">Geen to-do items.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-head">
+                <h3 class="section-title">Top vacatures</h3>
+                <p class="section-subtitle">Meeste activiteit.</p>
+            </div>
+            <div class="dash-card-body">
+                <div class="mini-table">
+                    <div class="mini-head">
+                        <div>Vacature</div>
+                        <div>Status</div>
+                        <div style="text-align:right;">
+                            {{ top_vacancies[0].metric_label if top_vacancies|length > 0 else "Metric" }}
+                        </div>
+                    </div>
+
+                    {% for v in top_vacancies %}
+                    <a class="mini-row" href="{{ url_for('job_posting_detail_page', job_id=v.id) }}">
+                        <div>
+                            <div class="mini-title">{{ v.title }}</div>
+                            <div class="mini-sub">{{ v.department }}</div>
+                        </div>
+                        <div><span class="status-pill status-{{ v.status }}">{{ v.status }}</span></div>
+                        <div style="text-align:right;"><strong>{{ v.metric }}</strong></div>
+                    </a>
+                    {% else %}
+                    <div class="empty-state">Nog geen data.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dash-card" style="margin-top:16px;">
+        <div class="dash-card-head">
+            <h3 class="section-title">Recente activiteit</h3>
+            <p class="section-subtitle">Laatste 10 events (audit log).</p>
+        </div>
+        <div class="dash-card-body">
+            <div class="activity-list">
+                {% for a in recent_activity %}
+                <div class="activity-item">
+                    <div class="activity-main">
+                        <div class="activity-title">
+                            <strong>{{ a.event_type }}</strong>
+                            <span class="activity-meta">· {{ a.entity_type }} #{{ a.entity_id }}</span>
+                        </div>
+                        <div class="activity-sub">
+                            {% if a.from_status or a.to_status %}
+                            {{ a.from_status or "—" }} → {{ a.to_status or "—" }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="activity-side">
+                        <div class="activity-time">{{ a.created_at }}</div>
+                        <div class="activity-by">{{ a.by }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state">Geen activiteit gevonden.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
 </div>
+
+<!-- ✅ Alle data in JSON, zodat VSCode geen JS errors geeft -->
+<script type="application/json" id="dashboard-data">
+{{ {
+  "vacancy_status_counts": vacancy_status_counts,
+  "application_status_counts": application_status_counts,
+  "apps_last14_labels": apps_last14_labels,
+  "apps_last14_data": apps_last14_data,
+  "interview_status_counts": interview_status_counts,
+  "evaluation_status_counts": evaluation_status_counts,
+  "interviews_next14_labels": interviews_next14_labels,
+  "interviews_next14_data": interviews_next14_data
+} | tojson }}
+</script>
+
+<script>
+    // Helpers
+    function chartDoughnut(id, labels, data) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        new Chart(el, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data }] },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    function chartBar(id, labels, data) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        new Chart(el, {
+            type: 'bar',
+            data: { labels, datasets: [{ data }] },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+    }
+
+    function chartLine(id, labels, data) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        new Chart(el, {
+            type: 'line',
+            data: { labels, datasets: [{ data, tension: 0.3 }] },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+    }
+
+    // Read JSON data
+    const raw = document.getElementById("dashboard-data");
+    const payload = raw ? JSON.parse(raw.textContent || "{}") : {};
+
+    // Vacancies per status
+    if (document.getElementById("vacancyStatusChart")) {
+        const rows = payload.vacancy_status_counts || [];
+        chartBar(
+            "vacancyStatusChart",
+            rows.map(r => r.status),
+            rows.map(r => r.count)
+        );
+    }
+
+    // Applications per status
+    if (document.getElementById("appStatusChart")) {
+        const rows = payload.application_status_counts || [];
+        chartDoughnut(
+            "appStatusChart",
+            rows.map(r => r.status),
+            rows.map(r => r.count)
+        );
+    }
+
+    // Apps last 14 days
+    if (document.getElementById("appsLast14Chart")) {
+        chartLine(
+            "appsLast14Chart",
+            payload.apps_last14_labels || [],
+            payload.apps_last14_data || []
+        );
+    }
+
+    // Interviews (interviewer)
+    if (document.getElementById("interviewStatusChart")) {
+        const rows = payload.interview_status_counts || [];
+        chartBar(
+            "interviewStatusChart",
+            rows.map(r => r.status),
+            rows.map(r => r.count)
+        );
+    }
+
+    // Evaluations (interviewer)
+    if (document.getElementById("evaluationStatusChart")) {
+        const rows = payload.evaluation_status_counts || [];
+        chartDoughnut(
+            "evaluationStatusChart",
+            rows.map(r => r.status),
+            rows.map(r => r.count)
+        );
+    }
+
+    // Interviews next 14 days (interviewer)
+    if (document.getElementById("interviewsNext14Chart")) {
+        chartLine(
+            "interviewsNext14Chart",
+            payload.interviews_next14_labels || [],
+            payload.interviews_next14_data || []
+        );
+    }
+</script>
 {% endblock %}
